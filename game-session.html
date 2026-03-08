@@ -5,12 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Veritas - Game Session</title>
     <style>
-        /* ═══ BACKGROUND ═══ */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             background: #0a0a0f;
@@ -20,433 +15,336 @@
             min-height: 100vh;
         }
 
+        /* ═══ PARTICLES ═══ */
         #particles {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 0;
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none; z-index: 0;
         }
-
         .particle {
-            position: absolute;
-            width: 2px;
-            height: 2px;
-            background: #00a7b5;
-            border-radius: 50%;
-            opacity: 0.3;
+            position: absolute; width: 2px; height: 2px;
+            background: #00a7b5; border-radius: 50%; opacity: 0.3;
             animation: float 20s infinite linear;
         }
-
         @keyframes float {
             from { transform: translateY(100vh) translateX(0); }
-            to { transform: translateY(-100vh) translateX(100px); }
+            to   { transform: translateY(-100vh) translateX(100px); }
         }
 
         /* ═══ LAYOUT ═══ */
         #game-session {
-            position: relative;
-            z-index: 1;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 100px 20px 40px;
+            position: relative; z-index: 1;
+            max-width: 1200px; margin: 0 auto;
+            padding: 90px 20px 40px;
         }
 
-        /* ═══ TOP BAR ═══ */
+        /* ═══ STATUS BAR ═══ */
         .status-bar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: rgba(10, 10, 15, 0.95);
+            position: fixed; top: 0; left: 0; right: 0;
+            background: rgba(10,10,15,0.95);
             backdrop-filter: blur(10px);
             border-bottom: 1px solid #00a7b5;
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            padding: 12px 20px;
+            display: flex; justify-content: space-between; align-items: center;
             z-index: 100;
         }
-
         .timer {
-            font-size: 24px;
-            font-weight: bold;
-            color: #00a7b5;
-            font-family: 'Courier New', monospace;
+            font-size: 22px; font-weight: bold;
+            color: #00a7b5; font-family: 'Courier New', monospace;
         }
-
         .dispute-counter {
-            background: rgba(255, 107, 107, 0.2);
+            background: rgba(255,107,107,0.2);
             border: 1px solid #ff6b6b;
             color: #ff6b6b;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
+            padding: 6px 14px; border-radius: 20px;
+            font-size: 13px; font-weight: bold;
         }
-
-        .debug-info {
-            font-size: 12px;
-            color: #666;
-            font-family: monospace;
-        }
-
+        .debug-info { font-size: 12px; color: #666; font-family: monospace; }
         .end-session-btn {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(10, 10, 15, 0.9);
-            border: 2px solid #00a7b5;
-            color: #00a7b5;
-            padding: 12px 24px;
-            border-radius: 25px;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            cursor: pointer;
-            transition: all 0.3s;
-            backdrop-filter: blur(10px);
-            z-index: 20;
+            background: rgba(10,10,15,0.9);
+            border: 2px solid #00a7b5; color: #00a7b5;
+            padding: 8px 20px; border-radius: 25px;
+            font-size: 13px; text-transform: uppercase;
+            letter-spacing: 2px; cursor: pointer;
+            transition: all 0.3s; backdrop-filter: blur(10px);
         }
-
-        .end-session-btn:hover {
-            background: #00a7b5;
-            color: white;
-            transform: translateY(-2px);
-        }
+        .end-session-btn:hover { background: #00a7b5; color: white; }
 
         /* ═══ QUICK ACTIONS ═══ */
         .quick-actions-bar {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-            justify-content: center;
+            display: flex; gap: 10px; margin-bottom: 25px;
+            flex-wrap: wrap; justify-content: center;
         }
-
         .quick-action-btn {
-            background: rgba(0, 167, 181, 0.1);
-            border: 1px solid #00a7b5;
-            color: #00a7b5;
-            padding: 10px 20px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
+            background: rgba(0,167,181,0.1);
+            border: 1px solid #00a7b5; color: #00a7b5;
+            padding: 9px 18px; border-radius: 20px;
+            cursor: pointer; font-size: 13px; transition: all 0.3s;
         }
-
         .quick-action-btn:hover {
-            background: #00a7b5;
-            color: white;
-            transform: translateY(-2px);
+            background: #00a7b5; color: white; transform: translateY(-2px);
         }
 
-        /* ═══ LISTENING INDICATOR ═══ */
+        /* ═══ LISTENING ═══ */
         .listening-container {
-            text-align: center;
-            padding: 40px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 20px;
-            margin-bottom: 30px;
-            border: 2px solid transparent;
+            text-align: center; padding: 35px;
+            background: rgba(0,0,0,0.3); border-radius: 20px;
+            margin-bottom: 25px; border: 2px solid transparent;
             transition: all 0.3s;
         }
-
         .listening-container.active {
             border-color: #00a7b5;
-            box-shadow: 0 0 30px rgba(0, 167, 181, 0.3);
+            box-shadow: 0 0 30px rgba(0,167,181,0.2);
         }
-
         .listening-pulse {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: rgba(0, 167, 181, 0.2);
-            margin: 0 auto 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
+            width: 80px; height: 80px; border-radius: 50%;
+            background: rgba(0,167,181,0.15);
+            margin: 0 auto 16px;
+            display: flex; align-items: center; justify-content: center;
         }
-
-        .listening-container.active .listening-pulse {
-            animation: pulse 2s infinite;
-        }
-
+        .listening-container.active .listening-pulse { animation: pulse 2s infinite; }
         @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
+            0%,100% { transform: scale(1); opacity: 1; }
             50% { transform: scale(1.1); opacity: 0.7; }
         }
-
-        .mic-icon {
-            font-size: 32px;
-            color: #00a7b5;
-        }
-
-        .status-text {
-            font-size: 24px;
-            color: #00a7b5;
-            margin-bottom: 10px;
-        }
-
-        .status-subtext {
-            font-size: 14px;
-            color: #666;
-        }
-
-        /* ═══ CONFIDENCE INDICATOR ═══ */
-        .confidence-indicator {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(10, 10, 15, 0.9);
-            border: 1px solid #333;
-            padding: 15px;
-            border-radius: 10px;
-            display: none;
-            z-index: 100;
-        }
-
-        .confidence-indicator.show {
-            display: block;
-        }
-
-        .confidence-indicator.high {
-            border-color: #4ecdc4;
-            box-shadow: 0 0 20px rgba(78, 205, 196, 0.5);
-        }
-
-        .confidence-indicator.medium {
-            border-color: #ffe66d;
-            box-shadow: 0 0 20px rgba(255, 230, 109, 0.5);
-        }
-
-        .confidence-indicator.low {
-            border-color: #ff6b6b;
-            box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
-        }
+        .mic-icon { font-size: 32px; color: #00a7b5; }
+        .status-text { font-size: 22px; color: #00a7b5; margin-bottom: 8px; }
+        .status-subtext { font-size: 13px; color: #666; }
 
         /* ═══ LOG ═══ */
         .log-container {
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 10px;
-            padding: 20px;
-            max-height: 300px;
-            overflow-y: auto;
+            background: rgba(0,0,0,0.5); border-radius: 10px;
+            padding: 20px; max-height: 260px; overflow-y: auto;
             margin-top: 20px;
         }
-
         .log-entry {
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            font-size: 14px;
-            animation: slideIn 0.3s ease;
+            padding: 9px 12px; margin-bottom: 8px; border-radius: 5px;
+            font-size: 13px; animation: slideIn 0.3s ease;
         }
-
         @keyframes slideIn {
-            from { opacity: 0; transform: translateX(-20px); }
-            to { opacity: 1; transform: translateX(0); }
+            from { opacity: 0; transform: translateX(-15px); }
+            to   { opacity: 1; transform: translateX(0); }
         }
+        .log-entry.player  { background: rgba(0,167,181,0.1);  border-left: 3px solid #00a7b5; }
+        .log-entry.system  { background: rgba(255,255,255,0.04); border-left: 3px solid #555; font-style: italic; color: #888; }
+        .log-entry.ruling  { background: rgba(78,205,196,0.1);  border-left: 3px solid #4ecdc4; }
 
-        .log-entry.player {
-            background: rgba(0, 167, 181, 0.1);
-            border-left: 3px solid #00a7b5;
+        /* ═══ CONFIDENCE ═══ */
+        .confidence-indicator {
+            position: fixed; bottom: 20px; right: 20px;
+            background: rgba(10,10,15,0.9); border: 1px solid #333;
+            padding: 12px 16px; border-radius: 10px;
+            display: none; z-index: 100; font-size: 13px;
         }
-
-        .log-entry.system {
-            background: rgba(255, 255, 255, 0.05);
-            border-left: 3px solid #666;
-            font-style: italic;
-        }
-
-        .log-entry.ruling {
-            background: rgba(78, 205, 196, 0.1);
-            border-left: 3px solid #4ecdc4;
-        }
+        .confidence-indicator.show { display: block; }
+        .confidence-indicator.high   { border-color: #4ecdc4; box-shadow: 0 0 16px rgba(78,205,196,0.4); }
+        .confidence-indicator.medium { border-color: #ffe66d; box-shadow: 0 0 16px rgba(255,230,109,0.4); }
+        .confidence-indicator.low    { border-color: #ff6b6b; box-shadow: 0 0 16px rgba(255,107,107,0.4); }
 
         /* ═══ RULING OVERLAY ═══ */
         .ruling-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.9);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            padding: 20px;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.88);
+            display: none; align-items: center; justify-content: center;
+            z-index: 1000; padding: 20px;
         }
-
-        .ruling-overlay.show {
-            display: flex;
-        }
-
+        .ruling-overlay.show { display: flex; }
         .ruling-content {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            border: 2px solid #00a7b5;
-            border-radius: 20px;
-            padding: 40px;
-            max-width: 800px;
-            max-height: 90vh;
-            overflow-y: auto;
+            background: linear-gradient(135deg, #111122 0%, #14152a 100%);
+            border: 1px solid #00a7b5;
+            border-radius: 20px; padding: 36px;
+            max-width: 820px; width: 100%;
+            max-height: 90vh; overflow-y: auto;
             position: relative;
-            box-shadow: 0 0 50px rgba(0, 167, 181, 0.3);
+            box-shadow: 0 0 60px rgba(0,167,181,0.2);
+            animation: rulingAppear 0.3s ease;
         }
-
+        @keyframes rulingAppear {
+            from { opacity: 0; transform: scale(0.97) translateY(10px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
         .close-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: none;
-            border: none;
-            color: #00a7b5;
-            font-size: 24px;
-            cursor: pointer;
+            position: absolute; top: 16px; right: 18px;
+            background: none; border: none; color: #555;
+            font-size: 22px; cursor: pointer; transition: color 0.2s;
         }
+        .close-btn:hover { color: #00a7b5; }
 
-        /* ═══ KEYWORD RULING ═══ */
-        .keyword-ruling h2 {
-            color: #00a7b5;
-            margin-bottom: 20px;
-            font-size: 32px;
+        /* ═══ RULING CONTENT TYPES ═══ */
+
+        /* — Keyword — */
+        .ruling-keyword-badge {
+            display: inline-block;
+            background: rgba(0,167,181,0.15);
+            border: 1px solid #00a7b5;
+            color: #00a7b5; font-size: 11px;
+            letter-spacing: 2px; text-transform: uppercase;
+            padding: 3px 10px; border-radius: 20px;
+            margin-bottom: 12px;
         }
-
-        .keyword-rule {
-            background: rgba(0, 167, 181, 0.1);
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+        .ruling-title {
+            font-size: 30px; font-weight: 700;
+            color: #fff; margin-bottom: 6px; letter-spacing: 1px;
+        }
+        .ruling-rule-ref {
             font-family: 'Courier New', monospace;
-            color: #4ecdc4;
+            font-size: 12px; color: #4ecdc4;
+            margin-bottom: 20px; opacity: 0.8;
         }
-
-        .keyword-description {
-            font-size: 18px;
-            line-height: 1.6;
+        .ruling-plain {
+            font-size: 17px; line-height: 1.75;
+            color: #d0d0d0; margin-bottom: 24px;
+        }
+        .ruling-plain strong { color: #fff; }
+        .ruling-example-box {
+            background: rgba(255,230,109,0.06);
+            border-left: 3px solid #ffe66d;
+            padding: 16px 20px; border-radius: 0 10px 10px 0;
             margin-bottom: 20px;
         }
+        .ruling-example-box .ex-label {
+            color: #ffe66d; font-size: 12px;
+            text-transform: uppercase; letter-spacing: 1px;
+            margin-bottom: 8px; font-weight: 600;
+        }
+        .ruling-example-box p { font-size: 14px; line-height: 1.6; color: #c8c8c8; }
 
-        .keyword-example {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 20px;
-            border-radius: 10px;
-            border-left: 4px solid #ffe66d;
+        /* — Interaction chips — */
+        .ruling-also {
+            margin-top: 16px; padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .ruling-also-label {
+            font-size: 11px; color: #555;
+            text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;
+        }
+        .keyword-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .keyword-chip {
+            background: rgba(0,167,181,0.08);
+            border: 1px solid rgba(0,167,181,0.3);
+            color: #4ecdc4; padding: 5px 12px;
+            border-radius: 20px; font-size: 12px; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .keyword-chip:hover { background: rgba(0,167,181,0.2); }
+
+        /* — Interaction answer — */
+        .ruling-answer-tag {
+            display: inline-block;
+            padding: 4px 14px; border-radius: 20px;
+            font-size: 12px; font-weight: 700;
+            letter-spacing: 1px; text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+        .ruling-answer-tag.yes { background: rgba(78,205,196,0.2); color: #4ecdc4; border: 1px solid #4ecdc4; }
+        .ruling-answer-tag.no  { background: rgba(255,107,107,0.2); color: #ff6b6b; border: 1px solid #ff6b6b; }
+        .ruling-answer-tag.depends { background: rgba(255,230,109,0.15); color: #ffe66d; border: 1px solid #ffe66d; }
+        .ruling-answer-tag.info { background: rgba(0,167,181,0.15); color: #00a7b5; border: 1px solid #00a7b5; }
+
+        .ruling-answer-body {
+            font-size: 16px; line-height: 1.8; color: #d0d0d0; margin-bottom: 22px;
+        }
+        .ruling-answer-body .highlight { color: #fff; font-weight: 600; }
+        .ruling-answer-body .teal { color: #4ecdc4; }
+        .ruling-answer-body .gold { color: #ffe66d; }
+        .ruling-answer-body .red  { color: #ff8080; }
+
+        .ruling-nuance {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 10px; padding: 16px 18px;
+            font-size: 13px; color: #999; line-height: 1.6;
+            margin-bottom: 16px;
+        }
+        .ruling-nuance .nuance-title {
+            color: #00a7b5; font-size: 11px;
+            text-transform: uppercase; letter-spacing: 1px;
+            margin-bottom: 6px; font-weight: 600;
         }
 
-        .keyword-example h4 {
-            color: #ffe66d;
-            margin-bottom: 10px;
+        /* — Card — */
+        .card-ruling-grid {
+            display: grid; grid-template-columns: 240px 1fr;
+            gap: 28px; align-items: start;
         }
-
-        /* ═══ CARD RULING ═══ */
-        .card-ruling {
-            display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 30px;
+        .card-img-wrap {
+            background: rgba(0,0,0,0.4);
+            border-radius: 12px; padding: 16px; text-align: center;
         }
-
-        .card-image-container {
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 15px;
-            padding: 20px;
-            text-align: center;
-        }
-
         .card-image {
-            max-width: 100%;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            max-width: 100%; border-radius: 10px;
+            box-shadow: 0 8px 28px rgba(0,0,0,0.5);
         }
-
-        .card-details h2 {
-            color: #00a7b5;
-            margin-bottom: 10px;
-        }
-
-        .card-type {
-            color: #666;
-            margin-bottom: 20px;
-            font-style: italic;
-        }
-
+        .card-details h2 { color: #00a7b5; font-size: 26px; margin-bottom: 4px; }
+        .card-type { color: #777; font-style: italic; margin-bottom: 18px; font-size: 14px; }
         .oracle-box {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 20px;
-            border-radius: 10px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.07);
+            padding: 16px; border-radius: 10px;
+            margin-bottom: 16px; line-height: 1.65; font-size: 14px;
+            white-space: pre-wrap;
+        }
+        .rulings-box { background: rgba(0,167,181,0.04); padding: 16px; border-radius: 10px; }
+        .rulings-box h4 { color: #4ecdc4; margin-bottom: 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+        .rulings-box li { margin-bottom: 8px; font-size: 13px; color: #aaa; list-style: none; padding-left: 16px; position: relative; }
+        .rulings-box li::before { content: '→'; position: absolute; left: 0; color: #4ecdc4; }
+
+        /* — Multi-keyword — */
+        .multi-kw-item {
+            padding: 18px; margin-bottom: 14px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 12px;
+        }
+        .multi-kw-item h3 { color: #00a7b5; margin-bottom: 6px; font-size: 18px; }
+        .multi-kw-item .rule-ref { font-family: monospace; font-size: 11px; color: #4ecdc4; margin-bottom: 8px; }
+        .multi-kw-item p { font-size: 14px; color: #bbb; line-height: 1.6; }
+
+        /* — Compare — */
+        .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+        .compare-col { background: rgba(255,255,255,0.03); border-radius: 10px; padding: 18px; border: 1px solid rgba(255,255,255,0.06); }
+        .compare-col h4 { color: #00a7b5; margin-bottom: 10px; font-size: 16px; }
+        .compare-col ul { padding-left: 16px; }
+        .compare-col li { font-size: 13px; color: #bbb; line-height: 1.8; }
+        .compare-verdict {
+            background: rgba(0,167,181,0.07);
+            border: 1px solid rgba(0,167,181,0.25);
+            border-radius: 10px; padding: 14px 18px; font-size: 14px; color: #ccc; line-height: 1.6;
+        }
+        .compare-verdict strong { color: #4ecdc4; }
+
+        /* ═══ DISPUTE FLAG ═══ */
+        .dispute-flag {
+            display: flex; align-items: center; gap: 10px;
+            background: rgba(255,107,107,0.12);
+            border: 1px solid rgba(255,107,107,0.5);
+            border-radius: 10px; padding: 12px 16px;
             margin-bottom: 20px;
-            line-height: 1.6;
+            animation: disputeFlash 0.4s ease;
         }
-
-        .rulings-box {
-            background: rgba(0, 167, 181, 0.05);
-            padding: 20px;
-            border-radius: 10px;
+        @keyframes disputeFlash {
+            0%   { background: rgba(255,107,107,0.35); }
+            100% { background: rgba(255,107,107,0.12); }
         }
+        .dispute-flag-icon { font-size: 18px; }
+        .dispute-flag-text { font-size: 13px; color: #ff8080; line-height: 1.4; }
+        .dispute-flag-text strong { color: #ff6b6b; font-size: 14px; display: block; margin-bottom: 2px; }
 
-        .rulings-box h4 {
-            color: #4ecdc4;
-            margin-bottom: 10px;
-        }
-
-        /* ═══ COMBO DISPLAY ═══ */
-        .combo-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        .combo-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            border: 1px solid #333;
-            transition: all 0.3s;
-        }
-
-        .combo-card:hover {
-            border-color: #00a7b5;
-            transform: translateY(-5px);
+        .ruling-content.dispute-mode {
+            border-color: #ff6b6b;
+            box-shadow: 0 0 60px rgba(255,107,107,0.25);
         }
 
         /* ═══ RESPONSIVE ═══ */
-        @media (max-width: 768px) {
-            .card-ruling {
-                grid-template-columns: 1fr;
-            }
-            
-            .status-bar {
-                flex-direction: column;
-                gap: 10px;
-                padding: 10px;
-            }
-            
-            .timer {
-                font-size: 18px;
-            }
-            
-            .end-session-btn {
-                position: relative;
-                top: auto;
-                right: auto;
-                margin-top: 10px;
-            }
+        @media (max-width: 600px) {
+            .card-ruling-grid { grid-template-columns: 1fr; }
+            .compare-grid { grid-template-columns: 1fr; }
+            .ruling-content { padding: 24px 18px; }
+            .ruling-title { font-size: 24px; }
         }
     </style>
-    <base target="_blank">
-<base target="_blank">
 </head>
 <body>
-    <!-- End Session Button -->
-    <button class="end-session-btn" onclick="endSession()">← End Session</button>
-
-    <!-- Background -->
     <div id="particles"></div>
 
     <!-- Status Bar -->
@@ -454,36 +352,31 @@
         <div class="timer" id="session-timer">00:00:00</div>
         <div class="dispute-counter" id="dispute-counter">Disputes: 0</div>
         <div class="debug-info" id="debug-info">Ready</div>
+        <button class="end-session-btn" onclick="endSession()">← End Session</button>
     </div>
 
-    <!-- Main Session -->
+    <!-- Main -->
     <div id="game-session">
-        <!-- Quick Actions -->
         <div class="quick-actions-bar">
-            <button class="quick-action-btn" onclick="togglePause()">⏯️ Pause/Resume</button>
+            <button class="quick-action-btn" onclick="togglePause()">⏯ Pause/Resume</button>
             <button class="quick-action-btn" onclick="repeatLastRuling()">🔄 Repeat Last</button>
             <button class="quick-action-btn" onclick="showManualSearch()">🔍 Manual Search</button>
-            <button class="quick-action-btn" onclick="showRuleReference()">📚 Rule Reference</button>
+            <button class="quick-action-btn" onclick="showRuleReference()">📚 Keywords</button>
             <button class="quick-action-btn" onclick="testManually()">🧪 Test</button>
         </div>
 
-        <!-- Confidence Indicator -->
         <div class="confidence-indicator" id="confidence-indicator">
-            <div>Confidence: <span id="confidence-level">-</span></div>
+            Dispute detected — <span id="confidence-level">-</span> confidence
         </div>
 
-        <!-- Listening Indicator -->
         <div class="listening-container active" id="listening-container">
-            <div class="listening-pulse">
-                <div class="mic-icon">🎤</div>
-            </div>
-            <div class="status-text" id="status-text">Listening...</div>
-            <div class="status-subtext" id="status-subtext">Speak a card name or ask a question</div>
+            <div class="listening-pulse"><div class="mic-icon">🎤</div></div>
+            <div class="status-text" id="status-text">Listening…</div>
+            <div class="status-subtext" id="status-subtext">Ask about a rule, keyword, or card name</div>
         </div>
-    </div>
 
-    <!-- Log -->
-    <div class="log-container" id="log-container"></div>
+        <div class="log-container" id="log-container"></div>
+    </div>
 
     <!-- Ruling Overlay -->
     <div class="ruling-overlay" id="ruling-overlay" onclick="closeRuling(event)">
@@ -494,986 +387,1551 @@
     </div>
 
     <script>
-        console.log('🎮 Veritas Game Session Loading...');
+    // ═══════════════════════════════════════════════════════════════
+    // KEYWORD DATABASE — 50+ entries, context-aware plain English
+    // ═══════════════════════════════════════════════════════════════
+    const KEYWORDS = {
+        // ── Evasion ──
+        'flying': {
+            rule: '702.9b', category: 'Evasion',
+            plain: '<strong>Flying creatures can only be blocked by other flying creatures or creatures with reach.</strong> If no blocker has flying or reach, they simply cannot block it — the damage goes through.',
+            nuances: [
+                'A creature can have both flying and reach, but that\'s redundant.',
+                'Flying doesn\'t help you block non-flying creatures — you can still do that normally.',
+                'Some spells give flying temporarily (like Giant Growth variants), which matters for blocking.'
+            ],
+            example: 'Your 3/3 flier attacks into a board of 10/10 ground creatures. None can block unless they have flying or reach.',
+            related: ['reach','shadow','horsemanship','skulk','fear','intimidate']
+        },
+        'reach': {
+            rule: '702.17b', category: 'Evasion',
+            plain: '<strong>Reach lets a ground creature block flying creatures.</strong> That\'s it — it doesn\'t give the creature flying itself, so it can\'t block shadow or other special evasion, and it can\'t attack as if it had flying.',
+            nuances: ['Reach only matters when blocking, not when attacking.','A creature with reach can still be blocked by ground creatures normally.'],
+            example: 'Giant Spider (reach) can block your opponent\'s Dragon. But your opponent\'s flying creature cannot be blocked by most of your ground creatures unless they also have reach.',
+            related: ['flying']
+        },
+        'menace': {
+            rule: '702.110b', category: 'Evasion',
+            plain: '<strong>A creature with menace requires at least two blockers.</strong> Your opponent must block it with two or more creatures, or let it through entirely. They can\'t legally assign just one blocker.',
+            nuances: ['If your opponent only has one creature, it can\'t block menace at all — it must let it through.','Menace doesn\'t help if the blocker is removed after being declared.'],
+            example: 'You attack with a 4/4 with menace. Your opponent has a 3/3 and a 1/1. They must commit both or neither.',
+            related: ['trample','intimidate','fear']
+        },
+        'trample': {
+            rule: '702.19b', category: 'Evasion',
+            plain: '<strong>With trample, you only need to assign lethal damage to blockers — the rest goes to the player.</strong> You don\'t have to waste all your damage on a single 1/1 blocker.',
+            nuances: [
+                'You must assign at least lethal damage to each blocker before damage can trample over.',
+                'If a blocker has deathtouch, 1 damage is "lethal" to it — so 1 tramples over to the player.',
+                'Trample doesn\'t interact with the player\'s life total directly — it still counts as combat damage.',
+                'If all blockers are removed before damage, trample doesn\'t matter — all damage goes through anyway.'
+            ],
+            example: 'Your 8/8 trampler is blocked by a 2/2. Assign 2 damage to the blocker (lethal), 6 tramples to the player.',
+            related: ['deathtouch','first strike','double strike']
+        },
+        'shadow': {
+            rule: '702.27b', category: 'Evasion',
+            plain: '<strong>Shadow creatures can only be blocked by other shadow creatures, and can only block shadow creatures.</strong> They exist in a parallel dimension — ignoring most of the board in both directions.',
+            nuances: ['Unlike flying, shadow is two-directional — you can\'t block non-shadow creatures with it either.'],
+            example: 'Your 2/1 shadow slips past their entire army unless they also have shadow creatures.',
+            related: ['flying','fear','intimidate']
+        },
+        'fear': {
+            rule: '702.36b', category: 'Evasion',
+            plain: '<strong>Fear creatures can only be blocked by artifact creatures or black creatures.</strong> Against most decks, this is unblockable. Against black or artifact-heavy decks, it does nothing.',
+            nuances: ['Fear is an older mechanic mostly replaced by intimidate and menace in newer cards.'],
+            example: 'Black Knight with fear attacks into a white weenie deck — nothing can block it.',
+            related: ['intimidate','menace','protection']
+        },
+        'intimidate': {
+            rule: '702.13b', category: 'Evasion',
+            plain: '<strong>Intimidate creatures can only be blocked by artifact creatures or creatures that share a color with it.</strong> It\'s a color-based version of fear.',
+            nuances: ['A multicolored creature can be blocked if the blocker shares any of its colors.'],
+            example: 'Your green intimidate creature can only be blocked by green or artifact creatures.',
+            related: ['fear','menace']
+        },
+        'skulk': {
+            rule: '702.116b', category: 'Evasion',
+            plain: '<strong>A skulk creature can only be blocked by creatures with power equal to or less than its own power.</strong> Small skulk creatures often slip past big creatures — they only get stopped by similarly small ones.',
+            nuances: ['The comparison is the skulk creature\'s power vs the blocker\'s power.','Skulk doesn\'t help against 0-power creatures.'],
+            example: 'Your 1/1 skulk can only be blocked by 0/x or 1/x creatures. Their 4/4 can\'t legally block it.',
+            related: ['flying','shadow']
+        },
 
-        // ═══════════════════════════════════════
-        // KEYWORD DATABASE
-        // ═══════════════════════════════════════
-        const keywords = {
-            'trample': {
-                rule: '702.19b',
-                description: 'The controller of an attacking creature with trample first assigns damage to the creature(s) blocking it. Once all those blocking creatures are assigned lethal damage, any excess damage is assigned as its controller chooses among those blocking creatures and the player or planeswalker the creature is attacking.',
-                example: 'You attack with a 6/6 creature with trample. It is blocked by a 2/2 creature. You assign 2 damage to the blocker (lethal) and the remaining 4 damage tramples over to the defending player.'
-            },
-            'hexproof': {
-                rule: '702.11c',
-                description: '"Hexproof" on a permanent means "This permanent can\'t be the target of spells or abilities your opponents control."',
-                example: 'Your opponent cannot cast Doom Blade on your hexproof creature, but they can still destroy it with board wipes like Wrath of God that don\'t target.'
-            },
-            'deathtouch': {
-                rule: '702.2b',
-                description: 'A creature with toughness greater than 0 that\'s been dealt damage by a source with deathtouch since the last time state-based actions were checked is destroyed as a state-based action.',
-                example: 'A 1/1 creature with deathtouch blocks a 10/10 creature. Both deal damage, and both are destroyed because 1 damage is lethal from deathtouch.'
-            },
-            'flying': {
-                rule: '702.9b',
-                description: 'A creature with flying can\'t be blocked except by creatures with flying and/or reach.',
-                example: 'Your creature with flying can attack past ground creatures, but can be blocked by other flying creatures or creatures with reach.'
-            },
-            'haste': {
-                rule: '702.10b',
-                description: 'A creature with haste can attack and tap as soon as it comes under its controller\'s control.',
-                example: 'You can cast a creature with haste and attack with it immediately, or use its tap ability right away.'
-            },
-            'vigilance': {
-                rule: '702.20b',
-                description: 'Attacking doesn\'t cause creatures with vigilance to tap.',
-                example: 'A creature with vigilance can attack and still be able to block on your opponent\'s turn, or use tap abilities after attacking.'
-            },
-            'first strike': {
-                rule: '702.7b',
-                description: 'If at least one attacking or blocking creature has first strike or double strike as the combat damage step begins, the only creatures that assign combat damage in that step are those with first strike or double strike.',
-                example: 'A 2/2 with first strike blocks a 3/3 without first strike. The 2/2 deals damage first, killing the 3/3 before it can deal damage back.'
-            },
-            'double strike': {
-                rule: '702.8b',
-                description: 'A creature with double strike deals damage during the first combat damage step in addition to the second combat damage step.',
-                example: 'A 3/3 with double strike deals 3 damage in the first strike damage step, then 3 more in the normal damage step, for 6 total damage.'
-            },
-            'reach': {
-                rule: '702.17b',
-                description: 'A creature with reach can block creatures with flying as though it had flying.',
-                example: 'Your creature with reach can block flying creatures, but doesn\'t have flying itself for purposes of being blocked.'
-            },
-            'indestructible': {
-                rule: '702.12b',
-                description: 'A permanent with indestructible can\'t be destroyed. Such permanents aren\'t destroyed by lethal damage, and they ignore the "destroy" effect of state-based actions.',
-                example: 'Your indestructible creature can survive Wrath of God and combat with larger creatures, but can still be exiled, bounced, or have toughness reduced to 0.'
-            },
-            'lifelink': {
-                rule: '702.15b',
-                description: 'Damage dealt by a source with lifelink causes that source\'s controller to gain that much life.',
-                example: 'A 5/5 with lifelink deals 5 damage to a creature. You gain 5 life at the same time the damage is dealt.'
-            },
-            'menace': {
-                rule: '702.110b',
-                description: 'A creature with menace can\'t be blocked except by two or more creatures.',
-                example: 'Your 3/3 with menace attacks. Your opponent must block with at least two creatures, or let it through unblocked.'
-            },
-            'flash': {
-                rule: '702.8a',
-                description: 'Flash is a static ability that functions in any zone from which you could play the card it\'s on. "Flash" means "You may play this card any time you could cast an instant."',
-                example: 'You can cast a creature with flash during your opponent\'s combat phase to block, or at end of their turn to avoid sorcery-speed removal.'
-            },
-            'protection': {
-                rule: '702.16e',
-                description: 'Any damage that would be dealt by sources that have the stated quality to a permanent or player with protection is prevented.',
-                example: 'A creature with protection from red can\'t be damaged, enchanted, blocked, or targeted by anything red.'
-            },
-            'shroud': {
-                rule: '702.18b',
-                description: '"Shroud" means "This permanent or player can\'t be the target of spells or abilities."',
-                example: 'Unlike hexproof, shroud prevents targeting by anyone, including you. You can\'t equip it or target it with your own spells.'
-            },
-            'defender': {
-                rule: '702.3b',
-                description: 'A creature with defender can\'t attack.',
-                example: 'Walls and other creatures with defender can block normally but cannot attack. Some have special abilities that trigger when they block.'
-            },
-            'prowess': {
-                rule: '702.107a',
-                description: 'Prowess is a triggered ability. "Prowess" means "Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn."',
-                example: 'You cast an instant. Your creature with prowess gets +1/+1 until end of turn. Cast another spell, it gets another +1/+1.'
-            },
-            'enchant': {
-                rule: '702.5a',
-                description: 'Enchant is a static ability, written "Enchant [object or player]." The enchant ability restricts what an Aura can target and what an Aura can enchant.',
-                example: 'An Aura with "Enchant creature" can only target and attach to creatures. If the enchanted creature leaves play, the Aura goes to the graveyard.'
-            },
-            'equip': {
-                rule: '702.6a',
-                description: 'Equip is an activated ability of Equipment cards. "Equip [cost]" means "[Cost]: Attach this permanent to target creature you control."',
-                example: 'You pay the equip cost to attach the Equipment to one of your creatures. You can move it to another creature by paying the cost again.'
-            },
-            'fight': {
-                rule: '701.12',
-                description: 'When two creatures fight, each deals damage equal to its power to the other.',
-                example: 'Your 3/3 fights their 2/2. Your 3/3 deals 3 damage to the 2/2 (killing it), and their 2/2 deals 2 damage to your 3/3 (leaving it as a 3/1).'
-            },
-            'sacrifice': {
-                rule: '701.15a',
-                description: 'To sacrifice a permanent, its controller moves it from the battlefield directly to its owner\'s graveyard.',
-                example: 'You cast a spell that says "Sacrifice a creature." You choose one of your creatures and put it into your graveyard. You don\'t get any "dies" triggers.'
-            },
-            'counter': {
-                rule: '701.5a',
-                description: 'To counter a spell or ability means to cancel it, removing it from the stack.',
-                example: 'You cast Counterspell targeting their Lightning Bolt. When Counterspell resolves, Lightning Bolt is removed from the stack and does nothing.'
-            },
-            'exile': {
-                rule: '406.3',
-                description: 'Exile is a game zone outside the field of play. It is essentially a holding area for objects.',
-                example: 'Path to Exile exiles a creature. The creature doesn\'t die, so "dies" triggers don\'t happen. It can return with effects like flicker.'
-            },
-            'mill': {
-                rule: '701.13a',
-                description: 'To mill a number of cards, a player puts that many cards from the top of their library into their graveyard.',
-                example: 'You cast a spell that says "Target player mills 3 cards." They put the top 3 cards of their library into their graveyard.'
-            },
-            'scry': {
-                rule: '701.18a',
-                description: 'To scry N, look at the top N cards of your library, then put any number of them on the bottom of your library in any order and the rest on top in any order.',
-                example: 'You scry 2. Look at the top 2 cards. Put one on the bottom, one back on top (or both on bottom, or keep both on top in any order).'
-            },
-            ' surveil': {
-                rule: '701.42a',
-                description: 'To surveil N, look at the top N cards of your library, then you may put any number of them into your graveyard and the rest on top of your library in any order.',
-                example: 'You surveil 2. Look at top 2 cards. You can mill 0, 1, or 2 of them, putting the rest back on top in any order you choose.'
-            },
-            'explore': {
-                rule: '701.40a',
-                description: 'To explore, reveal the top card of your library. If it\'s a land, put it into your hand. Otherwise, put a +1/+1 counter on the exploring creature, then you may put the revealed card into your graveyard.',
-                example: 'Your creature explores. Reveal top card. If land: take it. If not: +1/+1 counter, then choose to keep or mill the card.'
-            },
-            'commander': {
-                rule: '903.3',
-                description: 'Each deck has a legendary creature designated as its commander. The commander begins the game in the command zone.',
-                example: 'Your commander is in the command zone. You can cast it from there. Each time it dies or is exiled, you can return it to the command zone.'
-            },
-            'commander tax': {
-                rule: '903.8',
-                description: 'A player may cast their commander from the command zone. Each time they do, it costs {2} more for each previous time they\'ve cast it from the command zone that game.',
-                example: 'Your commander costs {1}{G}{W} normally. First cast from command zone: {1}{G}{W}. Second cast: {3}{G}{W}. Third cast: {5}{G}{W}, and so on.'
+        // ── Combat ──
+        'first strike': {
+            rule: '702.7b', category: 'Combat',
+            plain: '<strong>First strike creates an extra combat damage step.</strong> Creatures with first strike deal their combat damage before creatures without it. If the first-striker kills the blocker, the blocker never gets to deal damage back.',
+            nuances: [
+                'Both first strike and double strike fight in the first combat damage step.',
+                'If the creature dies in the first damage step, it won\'t deal damage in the second.',
+                'First strike doesn\'t help in non-combat damage situations.'
+            ],
+            example: 'Your 2/2 first striker blocks their 3/3. Your creature deals 2 damage first — killing the 3/3 before it can deal its 3 damage. Your creature survives.',
+            related: ['double strike','deathtouch','trample']
+        },
+        'double strike': {
+            rule: '702.8b', category: 'Combat',
+            plain: '<strong>Double strike deals damage in both the first strike step AND the normal damage step.</strong> Effectively, it attacks twice in one combat.',
+            nuances: [
+                'A 2/2 with double strike deals 4 total combat damage — 2 in each step.',
+                'It triggers "deals damage" effects twice.',
+                'Combined with deathtouch, it kills two creatures in combat.',
+                'Combined with lifelink, you gain life twice.'
+            ],
+            example: 'Your 3/3 double striker attacks. In the first step it deals 3, then 3 more in the second step — 6 total to split as needed.',
+            related: ['first strike','lifelink','deathtouch']
+        },
+        'deathtouch': {
+            rule: '702.2b', category: 'Combat',
+            plain: '<strong>Any amount of damage from a deathtouch creature is lethal.</strong> A 1/1 with deathtouch kills a 10/10 — even 1 damage is enough to destroy it.',
+            nuances: [
+                'Deathtouch only applies to creatures, not players or planeswalkers.',
+                'Indestructible creatures are immune — deathtouch makes damage lethal, but indestructible ignores "destroy" effects.',
+                'You can assign exactly 1 damage to each blocker when trample+deathtouch are both present.',
+                'Regeneration saves a creature from deathtouch damage.'
+            ],
+            example: 'Your 1/1 deathtouch blocks their 8/8. Both die — your creature from the 8 combat damage, theirs from the 1 deathtouch damage.',
+            related: ['trample','indestructible','first strike','lifelink']
+        },
+        'lifelink': {
+            rule: '702.15b', category: 'Combat',
+            plain: '<strong>Whenever a lifelink creature deals damage, you gain that much life simultaneously.</strong> It doesn\'t wait for the damage step to end — the life gain happens as the damage is dealt.',
+            nuances: [
+                'Lifelink applies to all damage the creature deals, not just combat damage.',
+                'Multiple instances of lifelink don\'t stack — you only gain life once per damage event.',
+                'Damage to planeswalkers also triggers lifelink.',
+                'Double strike + lifelink = life gain in both damage steps.'
+            ],
+            example: 'Your 4/4 lifelinker attacks and isn\'t blocked. You gain 4 life when it deals 4 to the player.',
+            related: ['double strike','deathtouch','wither']
+        },
+        'vigilance': {
+            rule: '702.20b', category: 'Combat',
+            plain: '<strong>Vigilance means attacking doesn\'t tap the creature.</strong> It can attack and still be available to block on your opponent\'s next turn. It can also use tap abilities after attacking.',
+            nuances: ['Vigilance doesn\'t prevent the creature from being tapped by other effects.','You still need to declare it as an attacker.'],
+            example: 'Your 4/4 vigilance attacks. After damage, it\'s untapped and ready to block your opponent\'s counterattack.',
+            related: ['haste','untap']
+        },
+        'haste': {
+            rule: '702.10b', category: 'Combat',
+            plain: '<strong>Haste lets a creature attack and use tap abilities the same turn it enters the battlefield.</strong> Normally, creatures have "summoning sickness" and must wait a turn.',
+            nuances: [
+                'Summoning sickness only prevents attacking and using tap abilities — other abilities work fine.',
+                'If a creature changes controllers, it gets summoning sickness again — unless it has haste.',
+                'Haste only helps on the turn it enters. After that, summoning sickness is gone anyway.'
+            ],
+            example: 'You cast a 5/5 with haste on your turn. You can immediately attack with it this turn.',
+            related: ['vigilance','flash']
+        },
+
+        // ── Protection & Targeting ──
+        'hexproof': {
+            rule: '702.11c', category: 'Protection',
+            plain: '<strong>Hexproof means your opponents can\'t target it with spells or abilities.</strong> You can still target it yourself. Board wipes and non-targeting effects still work.',
+            nuances: [
+                'Hexproof only stops targeting — not "all creatures" effects like Wrath of God.',
+                'You can still equip or enchant your own hexproof creature.',
+                'Auras your opponent controls fall off if the creature gains hexproof after they\'re attached.',
+                '"Hexproof from [quality]" is a more specific version — only stops that color/type.'
+            ],
+            example: 'Your hexproof creature is safe from Doom Blade (targets), but not safe from Wrath of God (doesn\'t target).',
+            related: ['shroud','protection','ward','indestructible']
+        },
+        'shroud': {
+            rule: '702.18b', category: 'Protection',
+            plain: '<strong>Shroud means nobody can target it — not even you.</strong> Unlike hexproof, you can\'t equip, enchant, or target it with your own spells either.',
+            nuances: [
+                'Shroud is strictly worse than hexproof for your own permanents.',
+                'You can\'t move equipment onto a shroud creature.',
+                'Area effects like Wrath of God still affect shroud creatures.',
+                'Shroud is an older mechanic — many cards now use hexproof instead.'
+            ],
+            example: 'Your shrouded creature is safe from opponent removal — but you can\'t enchant it yourself or equip it.',
+            related: ['hexproof','protection']
+        },
+        'ward': {
+            rule: '702.20c', category: 'Protection',
+            plain: '<strong>Ward punishes opponents for targeting your permanent.</strong> When an opponent targets it with a spell or ability, that spell or ability is countered unless they pay the ward cost.',
+            nuances: [
+                'Ward uses the stack — the spell is countered after the cost is paid (or not).',
+                'Multiple ward abilities trigger separately.',
+                'Ward doesn\'t stop non-targeting effects.',
+                'You pay ward when you target it with YOUR OWN spells? No — only opponents pay ward.'
+            ],
+            example: 'Your creature has Ward 2. Opponent casts Doom Blade on it. They must pay 2 extra mana or it\'s countered.',
+            related: ['hexproof','shroud','protection']
+        },
+        'protection': {
+            rule: '702.16e', category: 'Protection',
+            plain: '<strong>Protection from [quality] means DEBT: can\'t be Damaged, Enchanted, Blocked, or Targeted by anything with that quality.</strong> It\'s the strongest defensive ability in the game.',
+            nuances: [
+                'Remember DEBT: Damage prevented, Enchant/Equip prevented, Blocked prevented, Target prevented.',
+                'Protection doesn\'t prevent effects that don\'t target or deal damage — like "destroy all creatures."',
+                'Protection from a color stops all spells of that color, including beneficial ones.',
+                'Phasing out doesn\'t trigger "leaves the battlefield" effects.'
+            ],
+            example: 'Creature with protection from red: can\'t be targeted by Lightning Bolt (target), can\'t be blocked by red creatures, any red damage is prevented.',
+            related: ['hexproof','shroud','ward','indestructible']
+        },
+        'indestructible': {
+            rule: '702.12b', category: 'Protection',
+            plain: '<strong>Indestructible permanents can\'t be destroyed — not by lethal damage, not by "destroy" effects.</strong> But they can still be exiled, bounced, have their toughness reduced to 0, or be sacrificed.',
+            nuances: [
+                '"Destroy" effects do nothing. Lethal damage is marked but doesn\'t cause destruction.',
+                'Toughness reduced to 0 or less still kills indestructible (state-based action, not "destroy").',
+                'Exile completely bypasses indestructible.',
+                'Indestructible doesn\'t stop -X/-X effects — reduce toughness to 0 to kill them.',
+                'Sacrifice gets around it — "sacrifice a creature" effects work on indestructible creatures.'
+            ],
+            example: 'Darksteel Colossus is indestructible. Wrath of God doesn\'t kill it. But Swords to Plowshares (exile) removes it. Or use Toxic Deluge to reduce its toughness to 0.',
+            related: ['hexproof','protection','exile','sacrifice']
+        },
+        'regenerate': {
+            rule: '701.14a', category: 'Protection',
+            plain: '<strong>Regeneration replaces destruction with: tap the creature, remove it from combat, remove all damage.</strong> It doesn\'t prevent damage — it replaces what happens after lethal damage would destroy it.',
+            nuances: [
+                'Regeneration doesn\'t work against exile effects.',
+                'It creates a "shield" that must be in place before the creature would be destroyed.',
+                'A regenerated creature is removed from combat — it won\'t deal or receive further combat damage this turn.',
+                'Regeneration counters don\'t stack cleanly with "can\'t regenerate" effects.'
+            ],
+            example: 'Opponent casts Doom Blade on your regenerating creature. You pay the regeneration cost — it taps instead of dying.',
+            related: ['indestructible','exile','deathtouch']
+        },
+        'phasing': {
+            rule: '702.25a', category: 'Unique',
+            plain: '<strong>Phasing means the permanent phases out at the beginning of your untap step and back in at the start of your next untap step.</strong> While phased out, it doesn\'t exist for game purposes — but it doesn\'t trigger "leave the battlefield" effects.',
+            nuances: [
+                'Phased-out permanents are invisible to the game — they can\'t be targeted, blocked, etc.',
+                'No "enter/leave battlefield" triggers when phasing — unique to this mechanic.',
+                'Counters and attachments stay on phased-out permanents.'
+            ],
+            example: 'Your creature phases out. Opponent\'s Wrath resolves. Your creature phases back in next turn unharmed, since it wasn\'t on the battlefield.',
+            related: ['blinking','exile']
+        },
+
+        // ── Triggered / Static Abilities ──
+        'prowess': {
+            rule: '702.107a', category: 'Triggered',
+            plain: '<strong>Each time you cast a noncreature spell, all your prowess creatures get +1/+1 until end of turn.</strong> Instants and sorceries are the best fuel — each one pumps every prowess creature you have.',
+            nuances: [
+                'Noncreature spells only — casting creatures doesn\'t trigger prowess.',
+                'Each prowess trigger is separate — casting 3 instants gives +3/+3 total.',
+                'Prowess triggers when you cast the spell, before it resolves.',
+                'Spells that get countered still trigger prowess — you cast them.'
+            ],
+            example: 'You have two prowess creatures. You cast Lightning Bolt (instant). Both prowess creatures get +1/+1. Cast another spell — both get another +1/+1.',
+            related: ['magecraft','spell mastery']
+        },
+        'flash': {
+            rule: '702.8a', category: 'Static',
+            plain: '<strong>Flash lets you cast the spell any time you could cast an instant.</strong> This means during opponents\' turns, in response to spells, at end of step — anywhere an instant could go.',
+            nuances: [
+                'Best used at end of opponent\'s turn to avoid giving them a chance to respond on their next turn.',
+                'Flash creatures can be cast as surprise blockers during combat.',
+                'Flash doesn\'t mean it\'s an instant — it\'s still its card type (creature, enchantment, etc.) for other purposes.',
+                'Leyline of Anticipation gives all your spells flash.'
+            ],
+            example: 'You hold a flash creature. Opponent attacks. During their declare attackers step, you cast your flash creature as a surprise blocker.',
+            related: ['haste','instant']
+        },
+        'defender': {
+            rule: '702.3b', category: 'Combat',
+            plain: '<strong>Defender means the creature can\'t attack.</strong> It can block normally. Most walls have defender, but some abilities specifically say "can attack as though they don\'t have defender."',
+            nuances: [
+                'Defender doesn\'t prevent the creature from using activated abilities.',
+                'Effects that say "creatures can attack as though they didn\'t have defender" override it.',
+                'Some defender creatures have very high toughness for their cost — they\'re defensive anchors.'
+            ],
+            example: 'Your 0/8 wall with defender can absorb huge attackers but can\'t join your attacks.',
+            related: ['vigilance','haste']
+        },
+
+        // ── Actions / Zones ──
+        'sacrifice': {
+            rule: '701.15a', category: 'Action',
+            plain: '<strong>Sacrificing means putting your own permanent directly from the battlefield to your graveyard.</strong> This is different from dying to combat damage. You can\'t sacrifice opponents\' permanents.',
+            nuances: [
+                'Sacrifice is a cost or effect — it can\'t be responded to like a targeting spell.',
+                '"Dies" triggers DO happen when you sacrifice a creature — dying means going from battlefield to graveyard, regardless of cause.',
+                'You can\'t sacrifice something that isn\'t on the battlefield.',
+                'Sacrifice bypasses indestructible and regeneration.'
+            ],
+            example: 'You sacrifice a creature to Viscera Seer. It goes to graveyard, triggering Blood Artist, and you scry 1.',
+            related: ['dies','graveyard','exile','indestructible']
+        },
+        'exile': {
+            rule: '406.3', category: 'Zone',
+            plain: '<strong>Exile is a separate zone from the graveyard — exiled cards are completely removed from normal play.</strong> "Dies" triggers don\'t happen. Graveyard recursion doesn\'t work. It\'s permanent removal unless the card specifically says otherwise.',
+            nuances: [
+                '"Dies" means going to the graveyard — exile does NOT trigger it.',
+                'Some exile effects are temporary — "exile until creature leaves" returns it.',
+                'Flickering (exile and return) is a useful reset tool that triggers ETB effects again.',
+                'Indestructible creatures CAN be exiled — it only protects against destruction.'
+            ],
+            example: 'Path to Exile removes a creature permanently. No death triggers. Blood Artist doesn\'t care. Graveyard recursion can\'t get it back.',
+            related: ['sacrifice','graveyard','indestructible','flicker']
+        },
+        'counter': {
+            rule: '701.5a', category: 'Action',
+            plain: '<strong>Countering removes a spell or ability from the stack — it never resolves and goes to the graveyard.</strong> A countered spell doesn\'t enter the battlefield, deal damage, or do anything.',
+            nuances: [
+                'Countering a spell doesn\'t trigger "dies" — the creature never entered the battlefield.',
+                'Some cards "can\'t be countered" — they still go on the stack but resolve regardless.',
+                'Counterspells themselves can be countered.',
+                'Mana abilities can\'t be countered — they don\'t use the stack.'
+            ],
+            example: 'You counter a creature spell. It goes to graveyard without entering play. No ETB triggers. No dies triggers.',
+            related: ['stack','resolve','mana abilities']
+        },
+        'mill': {
+            rule: '701.13a', category: 'Action',
+            plain: '<strong>To mill N means to put the top N cards of a library directly into the graveyard.</strong> The player doesn\'t choose — it\'s always the top of the library.',
+            nuances: [
+                'Milled cards go to the graveyard — death triggers don\'t happen (creatures never entered the battlefield).',
+                'Milling yourself can be strategic — some decks use the graveyard as a resource.',
+                'A player who can\'t draw a card loses immediately — not a player who runs out of library.',
+                'Cards milled face-down (rare) are still in the graveyard but unknown.'
+            ],
+            example: 'Opponent mills 10 cards. Those cards sit in their graveyard. They\'re only in danger of losing when they need to draw and their library is empty.',
+            related: ['graveyard','library','draw']
+        },
+        'scry': {
+            rule: '701.18a', category: 'Action',
+            plain: '<strong>Scry N means look at the top N cards, then put any combination of them back on top (in any order) or on the bottom (in any order).</strong> It filters your draws without drawing.',
+            nuances: [
+                'You can see all N cards simultaneously and arrange them however you want.',
+                'Cards go to top or bottom — you can\'t shuffle them into the middle.',
+                'Scry 0 does nothing meaningful.',
+                'Unlike surveil, scry doesn\'t mill cards — they all stay in the library.'
+            ],
+            example: 'You scry 3. See three cards. Keep 2 on top in the order you want, put 1 on the bottom.',
+            related: ['surveil','draw','library']
+        },
+        'surveil': {
+            rule: '701.42a', category: 'Action',
+            plain: '<strong>Surveil N is like scry, but you can put cards into your graveyard instead of the bottom of your library.</strong> It fuels graveyard strategies while also filtering.',
+            nuances: [
+                'Unlike scry, cards can go to the graveyard — useful for delve, flashback, or reanimation.',
+                'You choose for each card individually: top of library or graveyard.',
+                'Triggers "whenever you surveil" effects like Dimir Spybug.'
+            ],
+            example: 'Surveil 2: see two cards. Put one in your graveyard for later recursion. Keep one on top to draw next turn.',
+            related: ['scry','graveyard','flashback']
+        },
+        'explore': {
+            rule: '701.40a', category: 'Action',
+            plain: '<strong>Exploring reveals the top card of your library. Land? Put it in your hand. Non-land? The creature gets a +1/+1 counter, and you may put the revealed card in your graveyard.</strong>',
+            nuances: [
+                'If you reveal a land, you take it — you don\'t get a counter.',
+                'If you reveal a non-land, you get the counter regardless of what you do with the card.',
+                'An empty library means the creature explores and gets a +1/+1 counter (nothing revealed means non-land).'
+            ],
+            example: 'Your creature explores. Reveal top card — it\'s a Forest. You take it to hand. No counter. Or reveal a spell — +1/+1 counter added, keep spell on top or mill it.',
+            related: ['scry','surveil']
+        },
+
+        // ── Activated Abilities ──
+        'equip': {
+            rule: '702.6a', category: 'Activated',
+            plain: '<strong>Equip is a sorcery-speed activated ability that attaches an Equipment to one of your creatures.</strong> You pay the equip cost, target your creature, and attach it. You can re-equip to a different creature anytime.',
+            nuances: [
+                'Equip is sorcery speed — you can\'t equip in response to a spell targeting your creature.',
+                'Equipment stays on the battlefield when the creature dies — it can be re-equipped.',
+                'Moving equipment is also the equip ability — you pay the cost again.',
+                'You can\'t equip opponents\' creatures (unless an effect says otherwise).'
+            ],
+            example: 'You have a Sword and a creature. Pay equip cost, attach sword. Creature gets the bonus. Creature dies — sword remains, equip to another creature next turn.',
+            related: ['attach','enchant','artifact']
+        },
+        'enchant': {
+            rule: '702.5a', category: 'Static',
+            plain: '<strong>Enchant restricts which objects an Aura can attach to.</strong> "Enchant creature" means it can only go on creatures. If the enchanted object leaves or stops being the right type, the Aura goes to the graveyard.',
+            nuances: [
+                'An Aura becomes unattached and goes to graveyard if the enchanted object stops qualifying.',
+                'Hexproof/shroud on the permanent prevents you from casting Auras on it.',
+                'Auras don\'t give "enters the battlefield" triggers when moved.',
+                'You choose the target when casting — the Aura enters attached to its target.'
+            ],
+            example: 'You cast Pacifism (Enchant creature) on a creature. It can\'t attack or block. Creature gets exiled — Pacifism falls off to graveyard.',
+            related: ['equip','hexproof','shroud']
+        },
+
+        // ── Commander Specific ──
+        'commander tax': {
+            rule: '903.8', category: 'Commander',
+            plain: '<strong>Each time you cast your commander from the command zone, it costs 2 additional generic mana for each previous time you\'ve cast it from there this game.</strong> Casting from hand, graveyard, or exile doesn\'t count.',
+            nuances: [
+                'Only command zone casts count — using Reanimate to get it back has no tax.',
+                'Tax resets between games but not within a game.',
+                'Some commanders have abilities that reduce the tax.',
+                'Choosing to put commander in graveyard or exile instead of command zone avoids increasing the tax next time.'
+            ],
+            example: 'Commander costs {3}{R}. First cast: {3}{R}. After it dies and you send it to command zone: {5}{R}. Again: {7}{R}.',
+            related: ['command zone','commander damage','mana cost']
+        },
+        'commander damage': {
+            rule: '903.10a', category: 'Commander',
+            plain: '<strong>If a single commander has dealt 21 or more combat damage to you across the whole game, you lose — regardless of your life total.</strong> This is tracked per commander, per player, cumulatively.',
+            nuances: [
+                'Only combat damage counts — not spell damage, ETB effects, etc.',
+                'Each commander is tracked separately — you can\'t combine damage from two commanders.',
+                'Damage is cumulative across the entire game, even if your life total resets.',
+                'A player can lose to commander damage even at 40 life.'
+            ],
+            example: 'Opponent\'s commander deals you 7 damage three times over three turns. Total: 21. You lose, even at 35 life.',
+            related: ['commander tax','command zone','combat damage']
+        },
+
+        // ── Keywords with interaction depth ──
+        'fight': {
+            rule: '701.12', category: 'Action',
+            plain: '<strong>When two creatures fight, each deals damage equal to its power to the other simultaneously.</strong> This isn\'t combat — no attack, no block, no combat damage step. Just simultaneous damage.',
+            nuances: [
+                'It\'s not combat damage — first strike and double strike don\'t apply.',
+                'Deathtouch DOES apply — any damage from a deathtouch creature is lethal.',
+                'Lifelink DOES apply — you gain life equal to damage dealt.',
+                'Indestructible creatures can\'t be killed by fight — damage is marked but doesn\'t destroy.',
+                'Both creatures deal damage simultaneously — both might die.'
+            ],
+            example: 'Your 3/3 fights their 2/4. Your creature deals 3 to theirs, theirs deals 2 to yours. Yours survives (3/3 - 2 damage = still alive). Theirs dies (4 toughness - 3 damage = doesn\'t die). Wait — 2/4 has 4 toughness. 3 damage doesn\'t kill it.',
+            related: ['deathtouch','first strike','lifelink','combat']
+        },
+        'flash back': {
+            rule: '702.33a', category: 'Activated',
+            plain: '<strong>Flashback lets you cast a spell from your graveyard by paying the flashback cost.</strong> After it resolves (or is countered), it\'s exiled — not back to the graveyard.',
+            nuances: [
+                'You use flashback as an alternative casting — you can\'t do both.',
+                'The spell is exiled regardless of whether it resolves.',
+                'Some flashback costs differ in color from the original spell.',
+                'Flashback doesn\'t work if the card is exiled from the graveyard.'
+            ],
+            example: 'You have Snapcaster Mage give a Lightning Bolt flashback. Pay the flashback cost from graveyard — it resolves, then is exiled.',
+            related: ['graveyard','exile','jump-start']
+        },
+        'kicker': {
+            rule: '702.32a', category: 'Additional Cost',
+            plain: '<strong>Kicker is an optional additional cost when casting a spell.</strong> If you pay it, the spell gains additional effects. You choose whether to pay it as you cast.',
+            nuances: [
+                'Kicker is optional — you decide at cast time.',
+                'You can\'t pay kicker after the spell is on the stack.',
+                'Some spells have multiple kicker costs.',
+                'Multikicker lets you pay kicker multiple times for increasing effects.'
+            ],
+            example: 'Spell normally draws 1 card. With kicker paid, draw 3 instead. You choose at cast time whether to pay the extra mana.',
+            related: ['additional cost','escalate','overload']
+        },
+        'overload': {
+            rule: '702.96a', category: 'Additional Cost',
+            plain: '<strong>Overload lets you pay an alternative cost to change "target" to "each" — turning a single-target spell into a board wipe.</strong>',
+            nuances: [
+                'An overloaded spell has no targets — hexproof and shroud don\'t protect against it.',
+                'The overload cost is almost always much higher than the regular cost.',
+                'You can\'t overload AND target — it\'s one or the other.'
+            ],
+            example: 'Cyclonic Rift normally bounces one non-land permanent. Overloaded for 7 mana, it bounces everything your opponents own.',
+            related: ['target','hexproof','board wipe']
+        },
+        'cycling': {
+            rule: '702.28a', category: 'Activated',
+            plain: '<strong>Cycling lets you discard the card and pay the cycling cost to draw a new card.</strong> It\'s activated from your hand — if you don\'t need the card, you can turn it into another draw.',
+            nuances: [
+                'Cycling triggers "whenever you cycle" effects.',
+                'It\'s an activated ability from hand — you can cycle at instant speed.',
+                'Some cycling cards have effects that happen when you cycle them.',
+                'The card goes to graveyard, not exile.'
+            ],
+            example: 'You have a land-heavy hand. Cycling a cycling card: discard it, pay the cost, draw a fresh card.',
+            related: ['draw','discard','graveyard']
+        },
+        'convoke': {
+            rule: '702.51a', category: 'Additional Cost',
+            plain: '<strong>Convoke lets you tap creatures you control to help pay for the spell.</strong> Each tapped creature reduces the cost by 1 generic mana, or pays for a colored mana of its color.',
+            nuances: [
+                'Creatures used for convoke are tapped as you cast — before the spell resolves.',
+                'You can tap a creature with summoning sickness for convoke (tapping as cost, not attacking).',
+                'Convoke works on top of other reductions.',
+                'Tokens work for convoke.'
+            ],
+            example: 'Spell costs {5}. You have 3 creatures and 2 mana. Tap all 3 creatures (3 of the cost paid) + 2 mana = cast for free.',
+            related: ['delve','emerge','improvise']
+        },
+        'delve': {
+            rule: '702.65a', category: 'Additional Cost',
+            plain: '<strong>Delve lets you exile cards from your graveyard to pay for generic mana in the cost.</strong> Each exiled card reduces the cost by 1 generic mana.',
+            nuances: [
+                'You can\'t use delve for colored mana — only generic.',
+                'Cards exiled for delve are gone — no recursion.',
+                'Delve can make very expensive spells castable for almost nothing with a full graveyard.',
+                'Popular with cantrips and draw spells to fill the graveyard fast.'
+            ],
+            example: 'Treasure Cruise costs {7} or {U}. Exile 6 cards from your graveyard + {U} = draw 3 cards for 1 blue mana.',
+            related: ['graveyard','convoke','emerge']
+        },
+        'embalm': {
+            rule: '702.128a', category: 'Activated',
+            plain: '<strong>Embalm lets you exile the creature card from your graveyard to create a token copy of it — as a white Zombie.</strong> It keeps all the abilities, stats, and name of the original.',
+            nuances: [
+                'The token is a white Zombie in addition to its other types.',
+                'Embalm can only be activated once — it exiles the card.',
+                'Can be activated at sorcery speed only (unless you have flash).',
+                'The token has the same name, so "legendary rule" applies if you embalm a legendary.'
+            ],
+            example: 'Your Angel dies. Later, you embalm it: exile the card, create a white Zombie Angel token with the same stats and abilities.',
+            related: ['eternalize','graveyard','token']
+        },
+        'eternalize': {
+            rule: '702.129a', category: 'Activated',
+            plain: '<strong>Eternalize is like embalm but the token is always a 4/4 black Zombie, regardless of the original creature\'s power/toughness.</strong>',
+            nuances: ['The token is a 4/4 black Zombie with the original\'s abilities but not its base P/T.','Otherwise works exactly like embalm.'],
+            example: 'A 2/2 creature with eternalize becomes a 4/4 black Zombie token when eternalized.',
+            related: ['embalm','graveyard','token']
+        },
+        'mentor': {
+            rule: '702.134a', category: 'Triggered',
+            plain: '<strong>Whenever a mentor creature attacks, you put a +1/+1 counter on another attacking creature with lesser power.</strong> It pumps smaller attackers each combat.',
+            nuances: [
+                'Both creatures must be attacking simultaneously.',
+                'The targeted creature must have strictly less power than the mentor.',
+                'If two mentors attack, each can target different creatures.',
+                'You choose the target when the trigger resolves.'
+            ],
+            example: 'You attack with a 3-power mentor and a 2/2. Mentor triggers — put a +1/+1 on the 2/2, making it 3/3.',
+            related: ['combat','counters','triggered']
+        },
+        'afflict': {
+            rule: '702.130a', category: 'Triggered',
+            plain: '<strong>Afflict N means whenever the creature becomes blocked, the defending player loses N life.</strong> It punishes blocking — the opponent takes life whether they block or not.',
+            nuances: [
+                'Afflict triggers when the creature becomes blocked — even if the blocker is later removed.',
+                'The life loss happens regardless of combat damage.',
+                'Combined with trample, blocking is always costly.',
+                'Afflict doesn\'t apply if the creature is never blocked.'
+            ],
+            example: 'Hazoret with Afflict 3 attacks. Opponent blocks. Opponent loses 3 life from afflict AND takes combat damage.',
+            related: ['combat','trample','lifelink']
+        },
+        'annihilator': {
+            rule: '702.85a', category: 'Triggered',
+            plain: '<strong>Annihilator N triggers whenever the creature attacks — the defending player sacrifices N permanents.</strong> It\'s one of the most oppressive abilities in Commander.',
+            nuances: [
+                'The trigger goes on the stack when the creature is declared as an attacker.',
+                'The defending player chooses what to sacrifice.',
+                'It triggers even if the creature is blocked or killed before combat damage.',
+                'Multiple annihilator creatures stack — multiple sacrifices.'
+            ],
+            example: 'Eldrazi with Annihilator 4 attacks. Opponent must sacrifice 4 permanents — lands, creatures, anything — before even blocking.',
+            related: ['sacrifice','eldrazi','triggered']
+        }
+    };
+
+    // ═══════════════════════════════════════════════════════════════
+    // CONTEXT-AWARE QUESTION PATTERNS
+    // ═══════════════════════════════════════════════════════════════
+    const QUESTION_PATTERNS = [
+
+        // ── "Does X work with Y?" / "Do X and Y interact?" ──
+        {
+            id: 'interaction',
+            patterns: [
+                /does (.+?) (work|interact|combine|stack|go|trigger) with (.+)/i,
+                /do (.+?) and (.+?) (work|interact|combine|stack) (together)?/i,
+                /how does (.+?) interact with (.+)/i,
+                /(.+?) \+ (.+?) interaction/i,
+                /(.+?) with (.+?) equipped/i,
+                /what happens (when|if) (.+?) (has|meets|fights|attacks with) (.+)/i,
+                /(.+?) and (.+?) (together|combo|synergy)/i
+            ],
+            respond(match, text) {
+                return buildInteractionAnswer(text);
             }
-        };
+        },
 
-        // ═══════════════════════════════════════
-        // SEMANTIC QUESTION PATTERNS
-        // ═══════════════════════════════════════
-        const questionPatterns = {
-            bypass: {
-                patterns: [
-                    /if i (sacrifice|sac|kill|destroy) .+ does .+ (get|have|gain) .+ (damage|power|toughness|\+|counter)/i,
-                    /if .+ dies? does .+ (get|have|gain|trigger)/i,
-                    /when .+ dies? does .+ (get|have|gain|trigger)/i,
-                    /does .+ (trigger|work|happen) if .+ (die|dies|sacrificed|destroyed)/i
-                ],
-                response: (matches) => {
-                    return {
-                        type: 'bypass_answer',
-                        answer: 'YES - This will work as you expect. When a creature dies or is sacrificed, any triggered abilities that look for that condition will trigger normally. The game checks the last known information of the creature to determine if it had the relevant ability.',
-                        explanation: 'Death triggers and sacrifice synergies work because the game uses "last known information" - it looks at what the creature had when it was last on the battlefield.',
-                        rule: '603.10',
-                        related: ['sacrifice', 'dies', 'trigger']
-                    };
-                }
-            },
-            prevention: {
-                patterns: [
-                    /can i (prevent|stop|avoid) .+ (damage|combat|attacking)/i,
-                    /how (do|can) i (prevent|stop) .+ (damage|combat)/i,
-                    /what (prevents|stops) .+ (damage|combat|attacking)/i,
-                    /does .+ (prevent|stop) .+ (damage|combat)/i
-                ],
-                response: (matches) => {
-                    return {
-                        type: 'prevention_answer',
-                        answer: 'Prevention effects apply before damage is dealt. You can prevent damage using protection, prevention spells like Fog, or by removing the source. Note that "prevent all damage" effects won\'t stop abilities that don\'t deal damage (like "destroy target creature").',
-                        explanation: 'Damage prevention creates a replacement effect that modifies how damage is dealt. It can reduce damage to 0, but won\'t stop non-damage effects.',
-                        rule: '615.1',
-                        related: ['protection', 'fog', 'prevention']
-                    };
-                }
-            },
-            interaction: {
-                patterns: [
-                    /how does .+ (interact|work|combine) with .+/i,
-                    /what happens when .+ (meets|fights|blocks|attacks into) .+/i,
-                    /do .+ and .+ (work|combine|interact) (together)?/i,
-                    /can .+ (block|target|affect) .+/i
-                ],
-                response: (matches) => {
-                    return {
-                        type: 'interaction_answer',
-                        answer: 'To give you a precise answer, I need to know the specific cards involved. Each interaction depends on timestamps, layers, and specific wording. Common interactions: Protection prevents damage/enchanting/targeting. Deathtouch makes any damage lethal. First strike changes combat order.',
-                        explanation: 'Magic interactions depend on the specific cards, their abilities, and the game state. Layer system determines how continuous effects apply.',
-                        rule: '613.1',
-                        related: ['layers', 'interaction', 'protection']
-                    };
-                }
-            },
-            comparison: {
-                patterns: [
-                    /what('s| is) the difference between .+ and .+/i,
-                    /how (is|does) .+ different from .+/i,
-                    /compare .+ to .+/i,
-                    /.+ vs\.? .+/i
-                ],
-                response: (matches) => {
-                    return {
-                        type: 'comparison_answer',
-                        answer: 'The key differences depend on what you\'re comparing. Generally: Hexproof vs Shroud - hexproof only stops opponents, shroud stops everyone. Protection vs Indestructible - protection prevents damage/enchanting/targeting, indestructible ignores destroy effects. Trample vs Menace - trample pushes excess damage through, menace requires multiple blockers.',
-                        explanation: 'Comparing mechanics requires looking at what each ability prevents or allows, and who controls the effect.',
-                        rule: 'Various',
-                        related: ['comparison', 'hexproof', 'shroud', 'protection']
-                    };
-                }
+        // ── "Does X survive / die to Y?" ──
+        {
+            id: 'survival',
+            patterns: [
+                /does (.+?) (survive|live|die|get killed by|get destroyed by|withstand) (.+)/i,
+                /can (.+?) (kill|destroy|remove|deal with) (.+)/i,
+                /will (.+?) (kill|destroy|survive) (.+)/i,
+                /does (.+?) (beat|lose to|win against) (.+)/i
+            ],
+            respond(match, text) {
+                return buildSurvivalAnswer(text);
             }
-        };
+        },
 
-        // ═══════════════════════════════════════
-        // STATE MANAGEMENT
-        // ═══════════════════════════════════════
-        const States = {
-            LISTENING: 'listening',
-            PROCESSING: 'processing',
-            WAITING: 'waiting',
-            PAUSED: 'paused'
-        };
-
-        let currentState = States.LISTENING;
-        let isProcessing = false;
-        let isPaused = false;
-        let expectingCardName = false;
-        let lastRuling = null;
-        let recognition = null;
-        let disputeCount = 0;
-        let sessionStartTime = Date.now();
-
-        // ═══════════════════════════════════════
-        // DISPUTE DETECTOR
-        // ═══════════════════════════════════════
-        class ImprovedDisputeDetector {
-            constructor() {
-                this.disputePatterns = [
-                    /\b(no|wait|hold on|stop|that's not right|incorrect|wrong|actually|but|hang on)\b/i,
-                    /\b(i think|don't you mean|are you sure|check again|verify)\b/i,
-                    /\b(dispute|challenge|objection|appeal)\b/i,
-                    /(\?.*\?)/,
-                    /\b(but|however|although)\s+(that|this|it)\s+(isn't|is not|doesn't|does not)\b/i
-                ];
-                this.confidenceLevels = {
-                    HIGH: 'high',
-                    MEDIUM: 'medium',
-                    LOW: 'low'
-                };
+        // ── "Can X block Y?" ──
+        {
+            id: 'blocking',
+            patterns: [
+                /can (.+?) (block|stop|intercept) (.+)/i,
+                /what (can|cannot) block (.+)/i,
+                /does (.+?) (get) blocked by (.+)/i,
+                /how do (you|i) block (.+)/i
+            ],
+            respond(match, text) {
+                return buildBlockingAnswer(text);
             }
+        },
 
-            analyze(text) {
-                const matches = this.disputePatterns.filter(pattern => pattern.test(text));
-                const confidence = this.calculateConfidence(matches, text);
-                
+        // ── "Does this trigger when X dies/sacrificed?" ──
+        {
+            id: 'death_trigger',
+            patterns: [
+                /does (.+?) trigger when (.+?) (dies?|is sacrificed|is destroyed|is killed|goes to graveyard)/i,
+                /if (.+?) (dies?|is sacrificed|is killed), does (.+?) (trigger|happen|work|fire)/i,
+                /when (.+?) (dies?|is sacrificed), (.+?) (triggers?|fires?|happens?)/i,
+                /do (death|dies?|sacrifice) triggers (work|fire|happen)/i,
+                /if i sacrifice .+ does .+ (trigger|happen|get|gain)/i
+            ],
+            respond(match, text) {
                 return {
-                    detected: matches.length > 0,
-                    confidence: confidence,
-                    matches: matches.length,
-                    timestamp: new Date().toISOString()
+                    tag: 'yes', tagLabel: 'YES — It Triggers',
+                    title: 'Death & Sacrifice Triggers',
+                    body: `<p>When a creature <span class="highlight">dies</span> (goes from battlefield to graveyard for any reason) or is <span class="highlight">sacrificed</span>, any abilities that say <span class="teal">"when [creature] dies"</span> or <span class="teal">"whenever a creature dies"</span> will trigger normally.</p>
+                    <p style="margin-top:12px;">The game uses <span class="highlight">last known information</span> — it looks at what the creature was when it was last on the battlefield, so its abilities are recognized even after it's gone.</p>`,
+                    nuance: { title: 'Important distinction', text: 'Exile does NOT count as dying. If your creature is Path to Exiled, Doom Blade kills it (dies ✓), but Swords to Plowshares exiles it (not dying ✗). No "dies" triggers on exile.' },
+                    example: 'You sacrifice a creature to Viscera Seer. Blood Artist triggers ("whenever a creature dies") — because sacrifice counts as dying.',
+                    rule: '603.10',
+                    related: ['sacrifice','exile','dies','graveyard']
                 };
             }
+        },
 
-            calculateConfidence(matches, text) {
-                if (matches.length >= 3) return this.confidenceLevels.HIGH;
-                if (matches.length === 2) return this.confidenceLevels.MEDIUM;
-                if (matches.length === 1 && text.length > 50) return this.confidenceLevels.MEDIUM;
-                return this.confidenceLevels.LOW;
-            }
-        }
-
-        const detector = new ImprovedDisputeDetector();
-
-        // ═══════════════════════════════════════
-        // CONVERSATION CONTEXT
-        // ═══════════════════════════════════════
-        const conversationContext = {
-            history: [],
-            maxSize: 10,
-            
-            add(type, content) {
-                this.history.push({
-                    type,
-                    content,
-                    timestamp: Date.now()
-                });
-                if (this.history.length > this.maxSize) {
-                    this.history.shift();
-                }
-            },
-            
-            getLast(type) {
-                for (let i = this.history.length - 1; i >= 0; i--) {
-                    if (this.history[i].type === type) {
-                        return this.history[i];
-                    }
-                }
-                return null;
-            },
-            
-            clear() {
-                this.history = [];
-            }
-        };
-
-        // ═══════════════════════════════════════
-        // CARD NAME CACHE
-        // ═══════════════════════════════════════
-        let cachedCardNames = null;
-
-        async function loadCardNames() {
-            if (cachedCardNames) return cachedCardNames;
-            
-            try {
-                const response = await fetch('https://api.scryfall.com/catalog/card-names');
-                const data = await response.json();
-                cachedCardNames = new Set(data.data.map(name => name.toLowerCase()));
-                console.log('📚 Loaded', cachedCardNames.size, 'card names');
-                return cachedCardNames;
-            } catch (e) {
-                console.log('⚠️ Could not load card names:', e);
-                cachedCardNames = new Set();
-                return cachedCardNames;
-            }
-        }
-
-        // ═══════════════════════════════════════
-        // SESSION DATA
-        // ═══════════════════════════════════════
-        window.sessionData = {
-            startTime: new Date().toISOString(),
-            endTime: null,
-            gameLength: 0,
-            disputesDetected: 0,
-            rulingsGiven: 0,
-            cardsReferenced: [],
-            keywordsReferenced: []
-        };
-
-        // ═══════════════════════════════════════
-        // LOGGING
-        // ═══════════════════════════════════════
-        function addLog(message, type = 'system') {
-            const container = document.getElementById('log-container');
-            const entry = document.createElement('div');
-            entry.className = `log-entry ${type}`;
-            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-            container.appendChild(entry);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        // ═══════════════════════════════════════
-        // SPEECH SYNTHESIS
-        // ═══════════════════════════════════════
-        function speak(text) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.rate = 1;
-                utterance.pitch = 1;
-                window.speechSynthesis.speak(utterance);
-            }
-        }
-
-        // ═══════════════════════════════════════
-        // QUESTION ANALYSIS
-        // ═══════════════════════════════════════
-        function analyzeQuestion(text) {
-            const lowerText = text.toLowerCase();
-            
-            // Check for semantic patterns first
-            for (const [type, data] of Object.entries(questionPatterns)) {
-                for (const pattern of data.patterns) {
-                    if (pattern.test(text)) {
-                        console.log('✅ Semantic pattern matched:', type);
-                        return data.response(text.match(pattern));
-                    }
-                }
-            }
-
-            // Check for multiple keywords
-            const foundKeywords = [];
-            for (const [keyword, data] of Object.entries(keywords)) {
-                if (lowerText.includes(keyword)) {
-                    foundKeywords.push({ keyword, data });
-                }
-            }
-
-            if (foundKeywords.length > 1) {
-                return {
-                    type: 'multiple_keywords',
-                    keywords: foundKeywords
-                };
-            }
-
-            if (foundKeywords.length === 1) {
-                return {
-                    type: 'keyword',
-                    keywords: foundKeywords
-                };
-            }
-
-            // Check for card names
-            const cardPatterns = [
-                /what does (.+?) do/i,
+        // ── "What does X mean / how does X work?" ──
+        {
+            id: 'keyword_explain',
+            patterns: [
+                /what (is|does|are) (.+?) (mean|do|work)?/i,
                 /how does (.+?) work/i,
-                /tell me about (.+?)(?:\?|$)/i,
-                /(.+?) vs (.+)/i,
-                /(.+?) and (.+)/i
-            ];
-
-            for (const pattern of cardPatterns) {
-                const match = text.match(pattern);
-                if (match) {
-                    const cards = match.slice(1).map(c => c.trim()).filter(c => c.length > 2);
-                    if (cards.length > 1) {
-                        return {
-                            type: 'combo',
-                            cards: cards
-                        };
-                    } else if (cards.length === 1) {
-                        return {
-                            type: 'card',
-                            cards: cards,
-                            needsCardName: false
-                        };
-                    }
-                }
+                /explain (.+)/i,
+                /tell me about (.+)/i,
+                /what('s| is) (.+)/i,
+                /define (.+)/i
+            ],
+            respond(match, text) {
+                return null; // falls through to keyword DB lookup
             }
+        },
 
-            // Generic card reference
-            if (lowerText.includes('card') || lowerText.includes('creature') || lowerText.includes('spell')) {
+        // ── "Can I prevent this?" / "How do I stop X?" ──
+        {
+            id: 'prevention',
+            patterns: [
+                /how (do|can) (i|you|we) (stop|prevent|avoid|counter|deal with) (.+)/i,
+                /what (stops|prevents|counters|answers) (.+)/i,
+                /is there (a way|anything) to (stop|prevent|counter|avoid) (.+)/i,
+                /can (.+?) be (stopped|prevented|countered|answered)/i
+            ],
+            respond(match, text) {
                 return {
-                    type: 'card',
-                    cards: [],
-                    needsCardName: true
+                    tag: 'info', tagLabel: 'Removal Options',
+                    title: 'How to Deal With It',
+                    body: `<p>There are several ways to remove or handle threats. The right answer depends on what you're facing:</p>
+                    <br>
+                    <p>• <span class="highlight">Destroy effects</span> (Doom Blade, Wrath of God) — fail against <span class="gold">indestructible</span></p>
+                    <p>• <span class="highlight">Exile effects</span> (Path to Exile, Swords to Plowshares) — bypass indestructible and regeneration</p>
+                    <p>• <span class="highlight">-X/-X effects</span> (Toxic Deluge) — kill indestructible by reducing toughness to 0</p>
+                    <p>• <span class="highlight">Sacrifice effects</span> (Dictate of Erebos) — bypass hexproof, shroud, and indestructible</p>
+                    <p>• <span class="highlight">Bounce</span> (Cyclonic Rift) — temporary, but resets ETB triggers and commander tax doesn't apply</p>
+                    <p>• <span class="highlight">Counter spells</span> — stop it before it enters the battlefield entirely</p>`,
+                    nuance: { title: 'Hexproof & Shroud', text: 'Non-targeting effects (like Wrath, -X/-X, or "each creature") bypass hexproof and shroud entirely — those abilities only protect against spells/abilities that target.' },
+                    example: 'Opponent has an indestructible hexproof creature. You can\'t destroy it, can\'t target it. Solution: sacrifice effect ("sacrifice a creature"), -X/-X to 0 toughness, or bounce it.',
+                    rule: '615.1',
+                    related: ['hexproof','shroud','indestructible','exile','sacrifice']
                 };
             }
+        },
+
+        // ── "Compare X vs Y / difference between X and Y" ──
+        {
+            id: 'compare',
+            patterns: [
+                /what('s| is) the difference between (.+?) and (.+)/i,
+                /how (is|are) (.+?) different (from|than) (.+)/i,
+                /(.+?) vs\.? (.+?) (difference|which|better|worse)/i,
+                /compare (.+?) (to|and|vs) (.+)/i,
+                /(.+?) or (.+?)\? which/i
+            ],
+            respond(match, text) {
+                return buildComparisonAnswer(text);
+            }
+        },
+
+        // ── Stack / priority questions ──
+        {
+            id: 'stack',
+            patterns: [
+                /(how does|explain|what is) the stack/i,
+                /stack (works?|order|priority)/i,
+                /in response to/i,
+                /what resolves (first|last|when)/i,
+                /can i respond/i
+            ],
+            respond(match, text) {
+                return {
+                    tag: 'info', tagLabel: 'The Stack',
+                    title: 'How the Stack Works',
+                    body: `<p>The stack is <span class="highlight">last in, first out</span> — the most recently added spell or ability resolves first.</p>
+                    <br>
+                    <p>1. You cast a spell → it goes on the stack → both players get <span class="teal">priority</span></p>
+                    <p>2. Opponent responds → their spell goes on top → you get priority again</p>
+                    <p>3. When <span class="highlight">all players pass priority in succession</span>, the top item resolves</p>
+                    <p>4. After resolution, players get priority again before the next item resolves</p>
+                    <br>
+                    <p>Spells and abilities resolve one at a time — there\'s always a chance to respond between each resolution.</p>`,
+                    nuance: { title: 'Mana abilities are special', text: 'Mana abilities (tapping a land for mana) don\'t use the stack and can\'t be responded to. They resolve immediately.' },
+                    example: 'You cast Lightning Bolt. Opponent responds with Counterspell. You respond with Red Elemental Blast on the Counterspell. Red Elemental Blast resolves first → Counterspell countered → Lightning Bolt resolves.',
+                    rule: '405.1',
+                    related: ['counter','priority','mana abilities','instant']
+                };
+            }
+        },
+
+        // ── ETB / enters the battlefield ──
+        {
+            id: 'etb',
+            patterns: [
+                /(etb|enters? (the )?battlefield) trigger/i,
+                /when (.+?) enters/i,
+                /enters.*(triggers?|happen|work)/i,
+                /does (.+?) trigger (when|if) .* enters/i
+            ],
+            respond(match, text) {
+                return {
+                    tag: 'yes', tagLabel: 'ETB Triggers',
+                    title: 'Enters the Battlefield',
+                    body: `<p>ETB (enters the battlefield) triggers happen <span class="highlight">whenever a permanent enters the battlefield</span> — from hand, graveyard, exile, command zone, or anywhere else.</p>
+                    <br>
+                    <p>• ETB triggers go on the stack and can be responded to</p>
+                    <p>• <span class="teal">Replacement effects</span> ("enters with counters", "enters tapped") happen as it enters — they\'re not triggers</p>
+                    <p>• Tokens entering the battlefield <span class="highlight">do</span> trigger ETB abilities</p>
+                    <p>• Flickering (exile and return) a creature resets it and triggers its ETB again</p>`,
+                    nuance: { title: 'Panharmonicon & doubling', text: 'Panharmonicon doubles ETB triggers for artifacts and creatures. So a creature with a triggered ETB ability will trigger twice if Panharmonicon is out.' },
+                    example: 'You cast Siege Rhino. Its ETB triggers — each opponent loses 3 life and you gain 3. With Panharmonicon, it triggers twice: 6 life lost, 6 gained.',
+                    rule: '603.1',
+                    related: ['flicker','panharmonicon','token','trigger']
+                };
+            }
+        }
+    ];
+
+    // ═══════════════════════════════════════════════════════════════
+    // CONTEXT-AWARE ANSWER BUILDERS
+    // ═══════════════════════════════════════════════════════════════
+
+    function buildInteractionAnswer(text) {
+        const lower = text.toLowerCase();
+        // Check for known keyword pairs
+        const foundKws = Object.keys(KEYWORDS).filter(k => lower.includes(k));
+
+        if (foundKws.length >= 2) {
+            const [a, b] = foundKws;
+            const interactions = getKnownInteraction(a, b);
+            if (interactions) return interactions;
 
             return {
-                type: 'unknown',
-                text: text
+                tag: 'depends', tagLabel: 'Depends on Specifics',
+                title: `${capitalize(a)} + ${capitalize(b)}`,
+                body: `<p>Both keywords are in play. Here\'s what matters:</p><br>
+                <p>• <span class="highlight">${capitalize(a)}:</span> ${KEYWORDS[a].plain}</p><br>
+                <p>• <span class="highlight">${capitalize(b)}:</span> ${KEYWORDS[b].plain}</p><br>
+                <p>For the exact interaction, the order of events (timestamps) and which abilities are static vs triggered matters most.</p>`,
+                nuance: null,
+                example: '',
+                rule: 'Various',
+                related: [a, b]
             };
         }
 
-        // ═══════════════════════════════════════
-        // RULING DISPLAY FUNCTIONS
-        // ═══════════════════════════════════════
-        function showSemanticAnswer(analysis) {
-            const overlay = document.getElementById('ruling-overlay');
-            const body = document.getElementById('ruling-body');
-            
-            body.innerHTML = `
-                <div class="keyword-ruling">
-                    <h2>💡 Answer</h2>
-                    <div class="keyword-description" style="font-size: 20px; color: #4ecdc4; margin-bottom: 20px;">
-                        ${analysis.answer}
-                    </div>
-                    <div class="keyword-example">
-                        <h4>📖 Explanation</h4>
-                        <p>${analysis.explanation}</p>
-                        <p style="margin-top: 10px; color: #00a7b5;">Rule ${analysis.rule}</p>
-                    </div>
-                </div>
-            `;
-            
-            overlay.classList.add('show');
-            speak(analysis.answer);
-            lastRuling = analysis;
-            window.sessionData.rulingsGiven++;
+        return {
+            tag: 'info', tagLabel: 'Interaction',
+            title: 'Card Interaction',
+            body: `<p>Interactions in Magic depend on:</p><br>
+            <p>• <span class="highlight">Timestamps</span> — which effect was applied first</p>
+            <p>• <span class="highlight">Layer system</span> — continuous effects apply in a specific order (type, color, P/T, etc.)</p>
+            <p>• <span class="highlight">Dependency</span> — if A changes what B does, B applies after A</p>
+            <p>• <span class="highlight">Static vs triggered</span> — static effects are always on, triggered effects use the stack</p>`,
+            nuance: { title: 'Quick rule', text: 'If in doubt: static effects are always active, triggered abilities use the stack, and the most recent effect wins for same-layer conflicts.' },
+            example: 'Ask me about a specific keyword pair or card name and I\'ll give you the precise interaction.',
+            rule: '613.1',
+            related: ['layers','timestamps','static','triggered']
+        };
+    }
+
+    function buildSurvivalAnswer(text) {
+        const lower = text.toLowerCase();
+        const foundKws = Object.keys(KEYWORDS).filter(k => lower.includes(k));
+
+        const checks = {
+            'indestructible': { survives: ['destroy','damage','lethal'], dies: ['exile','sacrifice','toughness to 0','-X/-X'] },
+            'hexproof': { survives: ['target','doom blade','path to exile targeting'], dies: ['wrath','board wipe','sacrifice','non-targeting'] },
+            'regenerate': { survives: ['destroy','lethal damage'], dies: ['exile','cant regenerate'] },
+            'protection': { survives: ['damage from that color','target of that color','enchant of that color'], dies: ['other colors','exile','sacrifice','non-targeting'] }
+        };
+
+        for (const kw of foundKws) {
+            if (checks[kw]) {
+                const c = checks[kw];
+                return {
+                    tag: 'depends', tagLabel: 'Depends on the Effect',
+                    title: `${capitalize(kw)}: What Kills It?`,
+                    body: `<p><span class="teal">✓ Survives:</span> ${c.survives.join(', ')}</p><br>
+                    <p><span class="red">✗ Doesn\'t survive:</span> ${c.dies.join(', ')}</p><br>
+                    <p>${KEYWORDS[kw].plain}</p>`,
+                    nuance: null,
+                    example: KEYWORDS[kw].example,
+                    rule: KEYWORDS[kw].rule,
+                    related: KEYWORDS[kw].related
+                };
+            }
         }
 
-        function showKeywordRuling(keyword, data) {
-            const overlay = document.getElementById('ruling-overlay');
-            const body = document.getElementById('ruling-body');
-            
-            body.innerHTML = `
-                <div class="keyword-ruling">
-                    <h2>${keyword.toUpperCase()}</h2>
-                    <div class="keyword-rule">Rule ${data.rule}</div>
-                    <div class="keyword-description">${data.description}</div>
-                    <div class="keyword-example">
-                        <h4>📖 Example</h4>
-                        <p>${data.example}</p>
-                    </div>
-                </div>
-            `;
-            
-            overlay.classList.add('show');
-            speak(`${keyword}. Rule ${data.rule}. ${data.description}`);
-            lastRuling = { keyword, data };
-            window.sessionData.rulingsGiven++;
-            window.sessionData.keywordsReferenced.push(keyword);
-            
-            addLog(`Ruling: ${keyword}`, 'ruling');
+        return {
+            tag: 'depends', tagLabel: 'Depends',
+            title: 'Survival Check',
+            body: `<p>Whether a creature survives depends on what\'s hitting it and what protections it has.</p><br>
+            <p>• <span class="highlight">Indestructible</span> — survives lethal damage and destroy effects, dies to exile and toughness reduction</p>
+            <p>• <span class="highlight">Hexproof/Shroud</span> — stops targeted removal, doesn\'t stop board wipes</p>
+            <p>• <span class="highlight">Protection</span> — prevents damage/enchanting/targeting from the specified quality</p>
+            <p>• <span class="highlight">Regeneration</span> — replaces destruction once per activation</p>`,
+            nuance: null,
+            example: 'Tell me the specific protection ability or creature name for a precise answer.',
+            rule: 'Various',
+            related: ['indestructible','hexproof','protection','regenerate']
+        };
+    }
+
+    function buildBlockingAnswer(text) {
+        const lower = text.toLowerCase();
+        const evasionKws = ['flying','menace','shadow','fear','intimidate','skulk','trample'];
+        const found = evasionKws.filter(k => lower.includes(k));
+
+        if (found.length > 0) {
+            const kw = found[0];
+            const data = KEYWORDS[kw];
+            if (data) {
+                return {
+                    tag: 'info', tagLabel: 'Blocking Rules',
+                    title: `Blocking ${capitalize(kw)}`,
+                    body: `<p>${data.plain}</p>`,
+                    nuance: data.nuances?.length ? { title: 'Key nuance', text: data.nuances[0] } : null,
+                    example: data.example,
+                    rule: data.rule,
+                    related: data.related
+                };
+            }
         }
 
-        function showMultipleKeywords(keywordsList) {
-            const overlay = document.getElementById('ruling-overlay');
-            const body = document.getElementById('ruling-body');
-            
-            let html = '<div class="keyword-ruling"><h2>Multiple Keywords Detected</h2>';
-            keywordsList.forEach(({keyword, data}) => {
-                html += `
-                    <div style="margin-bottom: 30px; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 10px;">
-                        <h3 style="color: #00a7b5; margin-bottom: 10px;">${keyword.toUpperCase()}</h3>
-                        <div class="keyword-rule" style="margin-bottom: 10px;">Rule ${data.rule}</div>
-                        <div class="keyword-description">${data.description}</div>
-                    </div>
-                `;
-            });
-            html += '</div>';
-            
-            body.innerHTML = html;
-            overlay.classList.add('show');
-            speak(`I found ${keywordsList.length} keywords. Showing ${keywordsList[0].keyword} first.`);
-            lastRuling = { type: 'multiple', keywords: keywordsList };
-            window.sessionData.rulingsGiven++;
+        return {
+            tag: 'info', tagLabel: 'Blocking',
+            title: 'Blocking Rules',
+            body: `<p>Blocking has some key rules:</p><br>
+            <p>• Any creature can block unless it has <span class="highlight">defender</span> issues or is tapped</p>
+            <p>• <span class="teal">Flying</span> creatures can only be blocked by flying or reach</p>
+            <p>• <span class="teal">Menace</span> requires 2+ blockers</p>
+            <p>• <span class="teal">Shadow</span> can only block shadow</p>
+            <p>• <span class="teal">Intimidate/Fear</span> require matching color or artifact type</p>
+            <p>• <span class="teal">Skulk</span> can only be blocked by equal or lesser power</p>`,
+            nuance: { title: 'Once a blocker is declared', text: 'The attacker is now "blocked" — even if the blocker is removed before damage. Trample won\'t push damage through if the blocking creature is removed (unless the attacker has trample AND the blocker is removed by a spell/ability, in which case all damage goes through).' },
+            example: 'Ask me about a specific evasion ability for precise blocking rules.',
+            rule: '509.1',
+            related: ['flying','menace','shadow','skulk','trample']
+        };
+    }
+
+    function buildComparisonAnswer(text) {
+        const lower = text.toLowerCase();
+        const kwPairs = [
+            ['hexproof','shroud'],['trample','menace'],['first strike','double strike'],
+            ['deathtouch','lifelink'],['exile','destroy'],['haste','vigilance'],
+            ['flying','reach'],['indestructible','protection'],['embalm','eternalize']
+        ];
+
+        for (const [a, b] of kwPairs) {
+            if (lower.includes(a) && lower.includes(b)) {
+                return buildSpecificComparison(a, b);
+            }
         }
 
-        async function showCardRuling(cardName) {
-            const overlay = document.getElementById('ruling-overlay');
-            const body = document.getElementById('ruling-body');
-            
-            body.innerHTML = '<div style="text-align: center; padding: 40px;">🔍 Searching for card...</div>';
-            overlay.classList.add('show');
-            
-            try {
-                const response = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cardName)}`);
-                if (!response.ok) throw new Error('Card not found');
-                
-                const card = await response.json();
-                
-                body.innerHTML = `
-                    <div class="card-ruling">
-                        <div class="card-image-container">
-                            <img src="${card.image_uris?.normal || card.image_uris?.small}" alt="${card.name}" class="card-image">
-                        </div>
-                        <div class="card-details">
-                            <h2>${card.name}</h2>
-                            <div class="card-type">${card.type_line}</div>
-                            <div class="oracle-box">${card.oracle_text || 'No oracle text available.'}</div>
-                            ${card.rulings_uri ? `
-                                <div class="rulings-box">
-                                    <h4>📚 Official Rulings</h4>
-                                    <p>Loading rulings...</p>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-                
-                // Fetch rulings if available
-                if (card.rulings_uri) {
-                    const rulingsRes = await fetch(card.rulings_uri);
-                    const rulingsData = await rulingsRes.json();
-                    const rulingsBox = body.querySelector('.rulings-box');
-                    if (rulingsBox && rulingsData.data.length > 0) {
-                        rulingsBox.innerHTML = `
-                            <h4>📚 Official Rulings</h4>
-                            <ul style="list-style: none; padding: 0;">
-                                ${rulingsData.data.slice(0, 3).map(r => `
-                                    <li style="margin-bottom: 10px; padding-left: 20px; position: relative;">
-                                        <span style="position: absolute; left: 0;">•</span>
-                                        ${r.comment}
-                                    </li>
-                                `).join('')}
-                            </ul>
-                        `;
-                    }
+        return {
+            tag: 'info', tagLabel: 'Comparison',
+            title: 'Comparing Keywords',
+            body: `<p>Common comparisons in Magic:</p><br>
+            <p>• <span class="highlight">Hexproof vs Shroud</span> — hexproof only stops opponents, shroud stops everyone</p>
+            <p>• <span class="highlight">First strike vs Double strike</span> — double strike deals damage in BOTH steps</p>
+            <p>• <span class="highlight">Exile vs Destroy</span> — exile bypasses indestructible, no death triggers</p>
+            <p>• <span class="highlight">Flying vs Reach</span> — reach only helps block, doesn\'t give flying itself</p>`,
+            nuance: null,
+            example: 'Ask me to compare two specific keywords for a detailed breakdown.',
+            rule: 'Various',
+            related: []
+        };
+    }
+
+    function buildSpecificComparison(a, b) {
+        const da = KEYWORDS[a];
+        const db = KEYWORDS[b];
+        const comparisons = {
+            'hexproof+shroud': {
+                title: 'Hexproof vs Shroud',
+                colA: ['Opponents can\'t target it','You CAN still target it yourself','You can equip and enchant it','Newer and more common'],
+                colB: ['Opponents can\'t target it','YOU also can\'t target it','Can\'t equip or enchant it','Older, mostly replaced by hexproof'],
+                verdict: '<strong>Hexproof is strictly better</strong> on your own permanents — all the protection with none of the self-restriction. Shroud is found mostly on older cards.'
+            },
+            'first strike+double strike': {
+                title: 'First Strike vs Double Strike',
+                colA: ['Deals damage in the first strike step only','Blockers without first strike may not deal damage back','Costs less to put on cards'],
+                colB: ['Deals damage in BOTH the first strike AND regular steps','Effectively hits twice — deals 2x its power in combat','Extremely powerful with lifelink or deathtouch'],
+                verdict: '<strong>Double strike is strictly better</strong> than first strike in combat — it does everything first strike does, plus adds a second damage step.'
+            },
+            'exile+destroy': {
+                title: 'Exile vs Destroy',
+                colA: ['Permanent removal — gone forever (usually)','Bypasses indestructible and regeneration','No "dies" triggers — creature never went to graveyard','Can\'t be retrieved by graveyard recursion'],
+                colB: ['Sends to graveyard','Fails against indestructible','"Dies" triggers fire normally','Can be retrieved by recursion (Reanimate, etc.)'],
+                verdict: '<strong>Exile is stronger</strong> than destroy in almost every way — it bypasses indestructible, stops recursion, and prevents death triggers.'
+            },
+            'flying+reach': {
+                title: 'Flying vs Reach',
+                colA: ['Can\'t be blocked except by flying/reach creatures','Can block other flying creatures','Two-way: attacks AND defends in the air'],
+                colB: ['Can block flying creatures','Does NOT have flying itself','One-way: only matters for blocking, not attacking'],
+                verdict: '<strong>Flying is better offensively</strong>; reach is purely defensive. A creature with reach cannot attack past ground creatures — it\'s only useful for blocking fliers.'
+            }
+        };
+
+        const key1 = `${a}+${b}`;
+        const key2 = `${b}+${a}`;
+        const comp = comparisons[key1] || comparisons[key2];
+
+        if (comp) {
+            return {
+                tag: 'info', tagLabel: 'Comparison',
+                title: comp.title,
+                compareMode: true,
+                labelA: capitalize(a), labelB: capitalize(b),
+                colA: comp.colA, colB: comp.colB,
+                verdict: comp.verdict,
+                rule: `${da?.rule || '?'} / ${db?.rule || '?'}`,
+                related: [a, b]
+            };
+        }
+
+        return {
+            tag: 'info', tagLabel: 'Comparison',
+            title: `${capitalize(a)} vs ${capitalize(b)}`,
+            body: `<p><span class="highlight">${capitalize(a)}</span> — ${da?.plain || 'See rule ' + da?.rule}</p><br>
+                   <p><span class="highlight">${capitalize(b)}</span> — ${db?.plain || 'See rule ' + db?.rule}</p>`,
+            nuance: null, example: '',
+            rule: `${da?.rule} / ${db?.rule}`,
+            related: [a, b]
+        };
+    }
+
+    function getKnownInteraction(a, b) {
+        const known = {
+            'trample+deathtouch': {
+                tag: 'yes', tagLabel: 'Famous Combo',
+                title: 'Trample + Deathtouch',
+                body: `<p>This is one of the strongest combat combinations in Magic.</p><br>
+                <p>With deathtouch, <span class="highlight">any amount of damage is lethal</span> to a creature. With trample, you only need to assign <span class="highlight">lethal damage</span> to blockers before trampling over.</p><br>
+                <p>Result: you assign <span class="teal">just 1 damage</span> to each blocker (that\'s lethal because of deathtouch), and the remaining power tramples over to the player.</p>`,
+                nuance: { title: 'Example', text: 'Your 6/6 with trample and deathtouch is blocked by three 10/10s. Assign 1 damage to each blocker (lethal because deathtouch), 3 damage tramples to the defending player. All three blockers die.' },
+                example: '',
+                rule: '702.19b + 702.2b',
+                related: ['trample','deathtouch','first strike']
+            },
+            'first strike+deathtouch': {
+                tag: 'yes', tagLabel: 'Deadly Combo',
+                title: 'First Strike + Deathtouch',
+                body: `<p>A creature with both first strike and deathtouch is an exceptional blocker and attacker.</p><br>
+                <p>In the first strike damage step, it deals damage — and because of deathtouch, <span class="highlight">even 1 damage kills any creature</span>. The blocked creature is dead before it ever deals damage back.</p>`,
+                nuance: { title: 'Result', text: 'Your first-strike deathtouch creature effectively can\'t be killed in combat by any single non-first-strike attacker, regardless of that creature\'s size.' },
+                example: '',
+                rule: '702.7b + 702.2b',
+                related: ['first strike','deathtouch','double strike']
+            },
+            'lifelink+double strike': {
+                tag: 'yes', tagLabel: 'Strong Synergy',
+                title: 'Lifelink + Double Strike',
+                body: `<p>Double strike deals damage in two separate combat steps. Lifelink gains you life equal to damage dealt.</p><br>
+                <p>Result: <span class="highlight">you gain life twice</span> — once in the first strike step and once in the regular damage step.</p>`,
+                nuance: null,
+                example: 'A 4/4 with double strike and lifelink deals 4 damage in the first step (gain 4 life) and 4 in the second (gain 4 more life) = 8 life gained in one combat.',
+                rule: '702.8b + 702.15b',
+                related: ['double strike','lifelink','first strike']
+            },
+            'hexproof+indestructible': {
+                tag: 'info', tagLabel: 'Strong Defense',
+                title: 'Hexproof + Indestructible',
+                body: `<p>Together, these two abilities cover almost every removal method:</p><br>
+                <p>• <span class="teal">Hexproof</span> stops targeted spells and abilities from opponents</p>
+                <p>• <span class="teal">Indestructible</span> stops destruction effects and lethal damage</p><br>
+                <p>What still works against this combination: <span class="highlight">exile</span>, <span class="highlight">sacrifice effects</span>, <span class="highlight">toughness reduction to 0</span>, and <span class="highlight">non-targeting board effects</span>.</p>`,
+                nuance: { title: 'The weakness', text: 'Toxic Deluge (-X/-X to toughness) or "sacrifice a creature" effects (like Dictate of Erebos) are the cleanest answers. Neither targets, and sacrifice bypasses indestructible.' },
+                example: '',
+                rule: '702.11c + 702.12b',
+                related: ['hexproof','indestructible','exile','sacrifice']
+            }
+        };
+
+        const key1 = `${a}+${b}`;
+        const key2 = `${b}+${a}`;
+        return known[key1] || known[key2] || null;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // QUESTION ANALYZER
+    // ═══════════════════════════════════════════════════════════════
+    function analyzeInput(text) {
+        const lower = text.toLowerCase().trim();
+
+        // 1. Try semantic question patterns first
+        for (const qp of QUESTION_PATTERNS) {
+            if (qp.id === 'keyword_explain') continue; // skip fallthrough
+            for (const pattern of qp.patterns) {
+                if (pattern.test(text)) {
+                    const result = qp.respond(text.match(pattern), text);
+                    if (result) return { type: 'semantic', data: result };
                 }
-                
-                speak(`${card.name}. ${card.type_line}. ${card.oracle_text || ''}`);
-                lastRuling = { type: 'card', card: card };
-                window.sessionData.rulingsGiven++;
-                window.sessionData.cardsReferenced.push(card.name);
-                addLog(`Card ruling: ${card.name}`, 'ruling');
-                
-            } catch (error) {
-                body.innerHTML = `
-                    <div class="keyword-ruling">
-                        <h2>Card Not Found</h2>
-                        <p>Could not find "${cardName}". Please check the spelling or try a different card.</p>
-                    </div>
-                `;
-                speak(`I couldn't find the card ${cardName}. Please try again.`);
             }
         }
 
-        function showComboRuling(cards) {
-            const overlay = document.getElementById('ruling-overlay');
-            const body = document.getElementById('ruling-body');
-            
-            body.innerHTML = `
-                <div class="keyword-ruling">
-                    <h2>⚔️ Interaction Analysis</h2>
-                    <p style="margin-bottom: 20px;">Analyzing interaction between: ${cards.join(' and ')}</p>
-                    <div class="combo-grid">
-                        ${cards.map(card => `
-                            <div class="combo-card">
-                                <h3 style="color: #00a7b5; margin-bottom: 10px;">${card}</h3>
-                                <p>Click to view card details</p>
-                                <button class="quick-action-btn" onclick="showCardRuling('${card}')" style="margin-top: 10px;">
-                                    View Card
-                                </button>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div class="keyword-example" style="margin-top: 30px;">
-                        <h4>💡 Interaction Note</h4>
-                        <p>When these cards interact, check timestamps (who played what first), protection abilities, and whether abilities trigger when entering/leaving the battlefield. Would you like me to explain a specific aspect of this interaction?</p>
-                    </div>
+        // 2. Multi-keyword interaction detection
+        const foundKws = Object.keys(KEYWORDS).filter(k => lower.includes(k));
+        if (foundKws.length >= 2) {
+            const interaction = getKnownInteraction(foundKws[0], foundKws[1]);
+            if (interaction) return { type: 'semantic', data: interaction };
+            return { type: 'multi_keyword', keywords: foundKws };
+        }
+
+        // 3. Single keyword lookup
+        if (foundKws.length === 1) {
+            return { type: 'keyword', keyword: foundKws[0] };
+        }
+
+        // 4. Card name lookup
+        return { type: 'card', text: text };
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // RULING RENDERER
+    // ═══════════════════════════════════════════════════════════════
+    function renderRuling(data) {
+        // Keyword ruling
+        if (data.type === 'keyword') {
+            const kw = data.keyword;
+            const d = KEYWORDS[kw];
+            return renderKeywordRuling(kw, d);
+        }
+        // Multi-keyword
+        if (data.type === 'multi_keyword') {
+            return renderMultiKeyword(data.keywords);
+        }
+        // Semantic / context-aware
+        if (data.type === 'semantic') {
+            return renderSemanticAnswer(data.data);
+        }
+        return null;
+    }
+
+    function renderKeywordRuling(kw, d) {
+        const relatedChips = (d.related || []).map(r =>
+            `<span class="keyword-chip" onclick="quickLookup('${r}')">${r}</span>`
+        ).join('');
+
+        const nuancesHtml = (d.nuances || []).map(n =>
+            `<p style="margin-bottom:6px; font-size:13px; color:#aaa;">• ${n}</p>`
+        ).join('');
+
+        return `
+            <div>
+                <div class="ruling-keyword-badge">${d.category}</div>
+                <div class="ruling-title">${kw.toUpperCase()}</div>
+                <div class="ruling-rule-ref">Comprehensive Rules — ${d.rule}</div>
+                <div class="ruling-plain">${d.plain}</div>
+                ${nuancesHtml ? `<div class="ruling-nuance"><div class="nuance-title">Key Nuances</div>${nuancesHtml}</div>` : ''}
+                <div class="ruling-example-box">
+                    <div class="ex-label">📖 In Play</div>
+                    <p>${d.example}</p>
                 </div>
-            `;
-            
-            overlay.classList.add('show');
-            speak(`Analyzing ${cards.join(' and ')}. Click on a card to see details.`);
-            lastRuling = { type: 'combo', cards: cards };
-            window.sessionData.rulingsGiven++;
-        }
+                ${relatedChips ? `<div class="ruling-also"><div class="ruling-also-label">Related Keywords</div><div class="keyword-chips">${relatedChips}</div></div>` : ''}
+            </div>`;
+    }
 
-        // ═══════════════════════════════════════
-        // BUTTON HANDLERS
-        // ═══════════════════════════════════════
-        function togglePause() {
-            isPaused = !isPaused;
-            const container = document.getElementById('listening-container');
-            const statusText = document.getElementById('status-text');
-            const statusSubtext = document.getElementById('status-subtext');
-            
-            if (isPaused) {
-                container.classList.remove('active');
-                statusText.textContent = 'Paused';
-                statusSubtext.textContent = 'Click Pause/Resume to continue';
-                if (recognition) recognition.stop();
-                addLog('Session paused', 'system');
-            } else {
-                container.classList.add('active');
-                statusText.textContent = 'Listening...';
-                statusSubtext.textContent = 'Speak a card name or ask a question';
-                if (recognition) recognition.start();
-                addLog('Session resumed', 'system');
-            }
-        }
+    function renderSemanticAnswer(d) {
+        const tagColors = { yes: 'yes', no: 'no', depends: 'depends', info: 'info' };
+        const tagHtml = d.tagLabel ? `<div class="ruling-answer-tag ${tagColors[d.tag] || 'info'}">${d.tagLabel}</div>` : '';
 
-        function repeatLastRuling() {
-            if (lastRuling) {
-                if (lastRuling.keyword) {
-                    showKeywordRuling(lastRuling.keyword, lastRuling.data);
-                } else if (lastRuling.type === 'card') {
-                    showCardRuling(lastRuling.card.name);
-                } else if (lastRuling.type === 'multiple') {
-                    showMultipleKeywords(lastRuling.keywords);
-                } else if (lastRuling.type === 'combo') {
-                    showComboRuling(lastRuling.cards);
-                } else if (lastRuling.answer) {
-                    showSemanticAnswer(lastRuling);
-                }
-                addLog('Repeated last ruling', 'system');
-            } else {
-                speak('No previous ruling to repeat.');
-            }
-        }
-
-        function showManualSearch() {
-            const cardName = prompt('Enter card name:');
-            if (cardName) {
-                showCardRuling(cardName);
-            }
-        }
-
-        function showRuleReference() {
-            const overlay = document.getElementById('ruling-overlay');
-            const body = document.getElementById('ruling-body');
-            
-            body.innerHTML = `
-                <div class="keyword-ruling">
-                    <h2>📚 Quick Rule Reference</h2>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
-                        ${Object.entries(keywords).slice(0, 12).map(([key, data]) => `
-                            <button class="quick-action-btn" onclick="showKeywordRuling('${key}', keywords['${key}']); event.stopPropagation();" style="text-align: left;">
-                                <strong>${key.toUpperCase()}</strong><br>
-                                <small style="opacity: 0.7;">${data.rule}</small>
-                            </button>
-                        `).join('')}
-                    </div>
+        // Compare mode
+        if (d.compareMode) {
+            const colAItems = d.colA.map(i => `<li>${i}</li>`).join('');
+            const colBItems = d.colB.map(i => `<li>${i}</li>`).join('');
+            return `<div>
+                ${tagHtml}
+                <div class="ruling-title">${d.title}</div>
+                <div class="ruling-rule-ref">Rules — ${d.rule}</div>
+                <div class="compare-grid">
+                    <div class="compare-col"><h4>${d.labelA}</h4><ul>${colAItems}</ul></div>
+                    <div class="compare-col"><h4>${d.labelB}</h4><ul>${colBItems}</ul></div>
                 </div>
-            `;
-            overlay.classList.add('show');
+                <div class="compare-verdict">${d.verdict}</div>
+                ${renderRelated(d.related)}
+            </div>`;
         }
 
-        function testManually() {
-            const tests = [
-                'how does trample work',
-                'what is hexproof',
-                'if I sacrifice a creature does it trigger',
-                'Lightning Bolt',
-                'trample vs deathtouch'
-            ];
-            const randomTest = tests[Math.floor(Math.random() * tests.length)];
-            console.log('🧪 MANUAL TEST:', randomTest);
-            addLog(`Test: "${randomTest}"`, 'system');
-            handleSpeech(randomTest);
+        const nuanceHtml = d.nuance ? `
+            <div class="ruling-nuance">
+                <div class="nuance-title">${d.nuance.title}</div>
+                ${d.nuance.text}
+            </div>` : '';
+
+        const exampleHtml = d.example ? `
+            <div class="ruling-example-box">
+                <div class="ex-label">📖 Example</div>
+                <p>${d.example}</p>
+            </div>` : '';
+
+        return `<div>
+            ${tagHtml}
+            <div class="ruling-title">${d.title}</div>
+            <div class="ruling-rule-ref">Rules — ${d.rule}</div>
+            <div class="ruling-answer-body">${d.body}</div>
+            ${nuanceHtml}
+            ${exampleHtml}
+            ${renderRelated(d.related)}
+        </div>`;
+    }
+
+    function renderRelated(related) {
+        if (!related || related.length === 0) return '';
+        const chips = related.filter(r => KEYWORDS[r]).map(r =>
+            `<span class="keyword-chip" onclick="quickLookup('${r}')">${r}</span>`
+        ).join('');
+        if (!chips) return '';
+        return `<div class="ruling-also"><div class="ruling-also-label">Related</div><div class="keyword-chips">${chips}</div></div>`;
+    }
+
+    function renderMultiKeyword(kwList) {
+        const items = kwList.slice(0, 4).map(kw => {
+            const d = KEYWORDS[kw];
+            return `<div class="multi-kw-item">
+                <h3>${kw.toUpperCase()}</h3>
+                <div class="rule-ref">${d.category} — Rule ${d.rule}</div>
+                <p>${d.plain.replace(/<[^>]+>/g,'')}</p>
+            </div>`;
+        }).join('');
+        return `<div>
+            <div class="ruling-answer-tag info">Multiple Keywords</div>
+            <div class="ruling-title" style="margin-bottom:20px;">Keywords Detected</div>
+            ${items}
+        </div>`;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // DISPUTE DETECTOR
+    // ═══════════════════════════════════════════════════════════════
+    const DISPUTE_PATTERNS = [
+        /\b(no|nope|wrong|incorrect|that'?s? (not|wrong)|not right)\b/i,
+        /\b(wait|hold on|hang on|stop|actually)\b/i,
+        /\b(i (think|disagree|don'?t think)|are you sure|check again|re-?check|verify that)\b/i,
+        /\b(dispute|challenge|objection|appeal|contest)\b/i,
+        /\b(but (that|this|it) (isn'?t?|is not|doesn'?t?|does not))\b/i,
+        /\b(that'?s? (wrong|incorrect|not how|not right|not true))\b/i,
+        /\b(you'?re? wrong|veritas is wrong|that rule is wrong)\b/i,
+        /\b(i (call|am calling) (bullshit|bs|dispute))\b/i
+    ];
+
+    function detectDispute(text) {
+        const matches = DISPUTE_PATTERNS.filter(p => p.test(text));
+        return {
+            isDispute: matches.length > 0,
+            confidence: matches.length >= 3 ? 'high' : matches.length === 2 ? 'medium' : matches.length === 1 ? 'low' : null
+        };
+    }
+
+    // Re-analyze dispute text to find WHAT is being disputed
+    function extractDisputeTopic(text) {
+        const lower = text.toLowerCase();
+
+        // 1. Check for keywords in the dispute sentence itself
+        const foundKws = Object.keys(KEYWORDS).filter(k => lower.includes(k));
+        if (foundKws.length >= 2) {
+            const interaction = getKnownInteraction(foundKws[0], foundKws[1]);
+            if (interaction) return { type: 'semantic', data: interaction };
+            return { type: 'multi_keyword', keywords: foundKws };
         }
+        if (foundKws.length === 1) return { type: 'keyword', keyword: foundKws[0] };
 
-        function endSession() {
-            console.log('🏁 Ending session...');
-            window.sessionData.endTime = new Date().toISOString();
-            window.sessionData.gameLength = Math.floor((new Date() - new Date(window.sessionData.startTime)) / 1000);
-            
-            // Stop recognition
-            if (recognition) {
-                isPaused = true;
-                recognition.stop();
-            }
-            
-            // Save to localStorage
-            localStorage.setItem('veritas_session', JSON.stringify(window.sessionData));
-            console.log('✅ Session saved:', window.sessionData);
-            
-            // Redirect to analysis
-            window.location.href = 'analysis.html';
-        }
+        // 2. Fall back to last ruling topic
+        if (lastRuling) return lastRuling.analysis;
 
-        function closeRuling(event) {
-            if (!event || event.target.id === 'ruling-overlay' || event.target.className === 'close-btn') {
-                document.getElementById('ruling-overlay').classList.remove('show');
-            }
-        }
+        return null;
+    }
 
-        // ═══════════════════════════════════════
-        // MAIN SPEECH HANDLER
-        // ═══════════════════════════════════════
-        function handleSpeech(text) {
-            if (isProcessing || isPaused) return;
+    // ═══════════════════════════════════════════════════════════════
+    // MAIN SPEECH HANDLER
+    // ═══════════════════════════════════════════════════════════════
+    let lastRuling = null;
+    let lastRulingText = '';
+    let isPaused = false;
+    let isProcessing = false;
+    let disputeCount = 0;
+    let sessionStartTime = Date.now();
+    let recognition = null;
 
-            console.log('🎤 Speech:', text);
-            isProcessing = true;
+    function handleSpeech(text) {
+        if (isProcessing || isPaused) return;
+        isProcessing = true;
 
-            addLog('You: ' + text, 'player');
-            conversationContext.add('question', text);
+        addLog('You: ' + text, 'player');
 
-            const analysis = analyzeQuestion(text);
-            console.log('📊 Analysis:', analysis.type);
+        // ── Run dispute detection in parallel ──
+        const dispute = detectDispute(text);
 
-            // ═══ KEYWORDS BYPASS DISPUTE DETECTION ═══
-            if (analysis.type === 'keyword' || 
-                analysis.type === 'multiple_keywords' ||
-                analysis.type === 'bypass_answer' || 
-                analysis.type === 'prevention_answer' || 
-                analysis.type === 'interaction_answer' || 
-                analysis.type === 'comparison_answer') {
+        if (dispute.isDispute) {
+            disputeCount++;
+            document.getElementById('dispute-counter').textContent = `Disputes: ${disputeCount}`;
 
-                console.log('✅ Keyword/semantic detected - processing immediately');
+            // Re-analyze the sentence for the disputed topic
+            const disputedAnalysis = extractDisputeTopic(text);
 
-                // Semantic answers
-                if (analysis.type === 'bypass_answer' || 
-                    analysis.type === 'prevention_answer' || 
-                    analysis.type === 'interaction_answer' || 
-                    analysis.type === 'comparison_answer') {
-                    showSemanticAnswer(analysis);
+            if (disputedAnalysis) {
+                const ruling = renderRuling(disputedAnalysis);
+                if (ruling) {
+                    showRuling(ruling, disputedAnalysis, { isDispute: true, confidence: dispute.confidence });
+                    speak('Dispute noted. Here is the official ruling.');
+                    addLog(`⚑ Dispute on: ${getRulingLabel(disputedAnalysis)}`, 'ruling');
                     isProcessing = false;
                     return;
                 }
-
-                // Multiple keywords
-                if (analysis.type === 'multiple_keywords') {
-                    showMultipleKeywords(analysis.keywords);
-                    isProcessing = false;
-                    return;
-                }
-
-                // Single keyword
-                if (analysis.type === 'keyword') {
-                    showKeywordRuling(analysis.keywords[0].keyword, analysis.keywords[0].data);
-                    isProcessing = false;
-                    return;
-                }
             }
 
-            // ═══ DISPUTE DETECTION ═══
-            const disputeCheck = detector.analyze(text);
-            if (disputeCheck.detected) {
-                console.log('⚠️ Potential dispute detected:', disputeCheck.confidence);
-                disputeCount++;
-                window.sessionData.disputesDetected = disputeCount;
-                document.getElementById('dispute-counter').textContent = `Disputes: ${disputeCount}`;
-                
-                const indicator = document.getElementById('confidence-indicator');
-                const level = document.getElementById('confidence-level');
-                indicator.className = 'confidence-indicator show ' + disputeCheck.confidence;
-                level.textContent = disputeCheck.confidence;
-
-                setTimeout(() => {
-                    indicator.className = 'confidence-indicator';
-                }, 3000);
-            }
-
-            // ═══ CARD HANDLING ═══
-            // Handle combo (multiple cards)
-            if (analysis.type === 'combo') {
-                showComboRuling(analysis.cards);
-                isProcessing = false;
-                return;
-            }
-
-            // Handle single card
-            if (analysis.type === 'card') {
-                if (analysis.needsCardName) {
-                    expectingCardName = true;
-                    speak('What card are you asking about?');
-                    setState(States.WAITING);
-                } else {
-                    showCardRuling(analysis.cards[0]);
-                }
-                isProcessing = false;
-                return;
-            }
-
-            // ═══ NO MATCH ═══
-            if (disputeCheck.detected) {
-                speak('I heard you. Please ask about a specific card or rule.');
-            } else {
-                speak('I didn\'t understand. Try asking about a keyword like trample or hexproof, or say "help" for options.');
-            }
-            
+            // No topic found — show a generic dispute response
+            showRuling(`<div>
+                <div class="dispute-flag">
+                    <span class="dispute-flag-icon">⚑</span>
+                    <div class="dispute-flag-text">
+                        <strong>Dispute Detected</strong>
+                        No specific rule was mentioned — ask about the keyword or card being disputed.
+                    </div>
+                </div>
+                <div class="ruling-title">What are you disputing?</div>
+                <div class="ruling-answer-body" style="margin-top:16px;">
+                    Say the keyword or card name you disagree with, or tap a chip below to re-confirm a recent ruling.
+                </div>
+            </div>`, {}, { isDispute: true, confidence: dispute.confidence });
+            speak('Dispute detected. Please specify what rule you are disputing.');
+            addLog('⚑ Dispute detected — no topic identified', 'ruling');
             isProcessing = false;
+            return;
         }
 
-        function setState(state) {
-            currentState = state;
-            const container = document.getElementById('listening-container');
-            const statusText = document.getElementById('status-text');
-            const statusSubtext = document.getElementById('status-subtext');
-            
-            switch(state) {
-                case States.LISTENING:
-                    container.classList.add('active');
-                    statusText.textContent = 'Listening...';
-                    statusSubtext.textContent = 'Speak a card name or ask a question';
-                    break;
-                case States.PROCESSING:
-                    container.classList.remove('active');
-                    statusText.textContent = 'Processing...';
-                    statusSubtext.textContent = 'Analyzing your question';
-                    break;
-                case States.WAITING:
-                    container.classList.remove('active');
-                    statusText.textContent = 'Waiting...';
-                    statusSubtext.textContent = 'Please provide more information';
-                    break;
-            }
+        // ── Normal question flow ──
+        const analysis = analyzeInput(text);
+        const ruling = renderRuling(analysis);
+
+        if (ruling) {
+            showRuling(ruling, analysis);
+            const speakText = getSpokenText(analysis);
+            if (speakText) speak(speakText);
+            addLog('Ruling given: ' + getRulingLabel(analysis), 'ruling');
+        } else {
+            showCardRuling(extractCardName(text));
         }
 
-        // ═══════════════════════════════════════
-        // SPEECH RECOGNITION SETUP
-        // ═══════════════════════════════════════
-        function setupSpeechRecognition() {
-            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                console.log('❌ Speech recognition not supported');
-                addLog('Speech recognition not supported in this browser', 'system');
-                return;
-            }
+        isProcessing = false;
+    }
 
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            
-            recognition.continuous = true;
-            recognition.interimResults = false;
-            recognition.lang = 'en-US';
+    function getSpokenText(analysis) {
+        if (analysis.type === 'keyword') {
+            const d = KEYWORDS[analysis.keyword];
+            return `${analysis.keyword}. ${d.plain.replace(/<[^>]+>/g,'').replace(/&amp;/g,'and')}`;
+        }
+        if (analysis.type === 'semantic') {
+            const d = analysis.data;
+            return d.tagLabel + '. ' + (d.body||'').replace(/<[^>]+>/g,'').replace(/&amp;/g,'and').slice(0,200);
+        }
+        return null;
+    }
 
-            recognition.onstart = function() {
-                console.log('🟢 Recognition started');
-                document.getElementById('debug-info').textContent = 'Listening';
-            };
+    function getRulingLabel(analysis) {
+        if (analysis.type === 'keyword') return analysis.keyword;
+        if (analysis.type === 'semantic') return analysis.data.title;
+        if (analysis.type === 'multi_keyword') return analysis.keywords.join(', ');
+        return 'card lookup';
+    }
 
-            recognition.onresult = function(event) {
-                const transcript = event.results[event.results.length - 1][0].transcript;
-                console.log('🗣️ Speech detected:', transcript);
-                handleSpeech(transcript);
-            };
+    function extractCardName(text) {
+        return text
+            .replace(/how does|what does|what is|tell me about|explain|search for|look up/gi, '')
+            .replace(/\?/g, '').trim();
+    }
 
-            recognition.onerror = function(event) {
-                console.log('❌ Recognition error:', event.error);
-                if (event.error === 'not-allowed') {
-                    addLog('Microphone access denied', 'system');
+    // ═══════════════════════════════════════════════════════════════
+    // RULING OVERLAY
+    // ═══════════════════════════════════════════════════════════════
+    function showRuling(html, analysis, disputeOpts) {
+        const overlay = document.getElementById('ruling-overlay');
+        const content = overlay.querySelector('.ruling-content');
+        const body = document.getElementById('ruling-body');
+
+        if (disputeOpts?.isDispute) {
+            const confidenceLabel = { high: 'High confidence dispute', medium: 'Possible dispute', low: 'Dispute signal detected' };
+            const flagHtml = `<div class="dispute-flag">
+                <span class="dispute-flag-icon">⚑</span>
+                <div class="dispute-flag-text">
+                    <strong>${confidenceLabel[disputeOpts.confidence] || 'Dispute Detected'}</strong>
+                    Ruling re-confirmed below — this is the official answer.
+                </div>
+            </div>`;
+            body.innerHTML = flagHtml + html;
+            content.classList.add('dispute-mode');
+        } else {
+            body.innerHTML = html;
+            content.classList.remove('dispute-mode');
+        }
+
+        overlay.classList.add('show');
+        if (analysis && Object.keys(analysis).length) lastRuling = { html, analysis };
+    }
+
+    function quickLookup(kw) {
+        if (KEYWORDS[kw]) {
+            const html = renderKeywordRuling(kw, KEYWORDS[kw]);
+            document.getElementById('ruling-body').innerHTML = html;
+            speak(kw + '. ' + KEYWORDS[kw].plain.replace(/<[^>]+>/g,'').slice(0,150));
+        }
+    }
+
+    function closeRuling(event) {
+        if (!event || event.target.id === 'ruling-overlay' || event.target.classList.contains('close-btn')) {
+            document.getElementById('ruling-overlay').classList.remove('show');
+        }
+    }
+
+    async function showCardRuling(cardName) {
+        const overlay = document.getElementById('ruling-overlay');
+        const body = document.getElementById('ruling-body');
+        body.innerHTML = `<div style="text-align:center;padding:40px;color:#666;">🔍 Looking up <em>${cardName}</em>…</div>`;
+        overlay.classList.add('show');
+
+        try {
+            const res = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cardName)}`);
+            if (!res.ok) throw new Error('Not found');
+            const card = await res.json();
+
+            let rulingsHtml = '';
+            try {
+                const rRes = await fetch(card.rulings_uri);
+                const rData = await rRes.json();
+                if (rData.data.length > 0) {
+                    rulingsHtml = `<div class="rulings-box"><h4>Official Rulings</h4><ul>
+                        ${rData.data.slice(0,3).map(r=>`<li>${r.comment}</li>`).join('')}
+                    </ul></div>`;
                 }
-            };
+            } catch(e) {}
 
-            recognition.onend = function() {
-                console.log('⏹️ Recognition ended');
-                if (!isPaused && recognition) {
-                    recognition.start();
-                }
-            };
+            const img = card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal || '';
+            body.innerHTML = `
+                <div class="card-ruling-grid">
+                    <div class="card-img-wrap">
+                        ${img ? `<img src="${img}" alt="${card.name}" class="card-image">` : '<div style="height:200px;display:flex;align-items:center;justify-content:center;color:#555;">No image</div>'}
+                    </div>
+                    <div class="card-details">
+                        <h2>${card.name}</h2>
+                        <div class="card-type">${card.type_line}</div>
+                        <div class="oracle-box">${(card.oracle_text || card.card_faces?.[0]?.oracle_text || 'No oracle text.').replace(/\n/g,'<br>')}</div>
+                        ${rulingsHtml}
+                    </div>
+                </div>`;
 
-            recognition.start();
+            speak(`${card.name}. ${card.type_line}. ${(card.oracle_text || '').slice(0,100)}`);
+            addLog(`Card: ${card.name}`, 'ruling');
+        } catch(e) {
+            body.innerHTML = `<div style="padding:30px">
+                <div class="ruling-answer-tag no">Not Found</div>
+                <div class="ruling-title">Card Not Found</div>
+                <p style="color:#999;margin-top:12px;">Couldn't find "<em>${cardName}</em>" — check the spelling or try the manual search.</p>
+            </div>`;
         }
+    }
 
-        // ═══════════════════════════════════════
-        // PARTICLE SYSTEM
-        // ═══════════════════════════════════════
-        function createParticles() {
-            const container = document.getElementById('particles');
-            for (let i = 0; i < 50; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'particle';
-                particle.style.left = Math.random() * 100 + '%';
-                particle.style.animationDelay = Math.random() * 20 + 's';
-                particle.style.animationDuration = (15 + Math.random() * 10) + 's';
-                container.appendChild(particle);
-            }
+    // ═══════════════════════════════════════════════════════════════
+    // SPEECH
+    // ═══════════════════════════════════════════════════════════════
+    function speak(text) {
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+        const utt = new SpeechSynthesisUtterance(text.replace(/<[^>]+>/g,''));
+        utt.rate = 0.95;
+        window.speechSynthesis.speak(utt);
+    }
+
+    function setupSpeechRecognition() {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) {
+            addLog('Speech recognition not supported — use Chrome or Edge.', 'system');
+            return;
         }
+        recognition = new SR();
+        recognition.continuous = true;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
 
-        // ═══════════════════════════════════════
-        // KEYBOARD SHORTCUTS
-        // ═══════════════════════════════════════
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeRuling();
-            } else if (e.key === ' ' && e.ctrlKey) {
-                e.preventDefault();
-                togglePause();
-            } else if (e.key === 'r' && e.ctrlKey) {
-                e.preventDefault();
-                repeatLastRuling();
-            }
+        recognition.onstart = () => {
+            document.getElementById('debug-info').textContent = 'Listening';
+        };
+        recognition.onresult = (e) => {
+            const t = e.results[e.results.length-1][0].transcript;
+            handleSpeech(t);
+        };
+        recognition.onerror = (e) => {
+            if (e.error !== 'no-speech') addLog('Mic error: ' + e.error, 'system');
+        };
+        recognition.onend = () => {
+            if (!isPaused) recognition.start();
+        };
+        recognition.start();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // BUTTONS
+    // ═══════════════════════════════════════════════════════════════
+    function togglePause() {
+        isPaused = !isPaused;
+        const container = document.getElementById('listening-container');
+        const statusText = document.getElementById('status-text');
+        const statusSubtext = document.getElementById('status-subtext');
+        if (isPaused) {
+            container.classList.remove('active');
+            statusText.textContent = 'Paused';
+            statusSubtext.textContent = 'Click Pause/Resume to continue';
+            if (recognition) recognition.stop();
+        } else {
+            container.classList.add('active');
+            statusText.textContent = 'Listening…';
+            statusSubtext.textContent = 'Ask about a rule, keyword, or card name';
+            if (recognition) recognition.start();
+        }
+    }
+
+    function repeatLastRuling() {
+        if (lastRuling) {
+            showRuling(lastRuling.html, lastRuling.analysis);
+            const spoken = getSpokenText(lastRuling.analysis);
+            if (spoken) speak(spoken);
+        } else {
+            speak('No previous ruling.');
+        }
+    }
+
+    function showManualSearch() {
+        const name = prompt('Enter card name:');
+        if (name?.trim()) showCardRuling(name.trim());
+    }
+
+    function showRuleReference() {
+        const categories = {};
+        for (const [kw, d] of Object.entries(KEYWORDS)) {
+            if (!categories[d.category]) categories[d.category] = [];
+            categories[d.category].push(kw);
+        }
+        let html = '<div><div class="ruling-title" style="margin-bottom:20px;">Keyword Reference</div>';
+        for (const [cat, kws] of Object.entries(categories)) {
+            html += `<div style="margin-bottom:18px;">
+                <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#555;margin-bottom:8px;">${cat}</div>
+                <div class="keyword-chips">
+                    ${kws.map(k=>`<span class="keyword-chip" onclick="quickLookup('${k}');event.stopPropagation();">${k}</span>`).join('')}
+                </div>
+            </div>`;
+        }
+        html += '</div>';
+        showRuling(html, {});
+    }
+
+    function testManually() {
+        const tests = [
+            'how does trample work',
+            'does deathtouch work with first strike',
+            'what is the difference between hexproof and shroud',
+            'if i sacrifice a creature does blood artist trigger',
+            'can my creature survive if it has indestructible',
+            'what is the stack',
+            'trample and deathtouch together',
+            'how do i stop an indestructible creature',
+            'does my prowess trigger if i cast an instant',
+            'Lightning Bolt'
+        ];
+        const t = tests[Math.floor(Math.random() * tests.length)];
+        addLog(`Test: "${t}"`, 'system');
+        handleSpeech(t);
+    }
+
+    function endSession() {
+        const data = {
+            startTime: new Date(sessionStartTime).toISOString(),
+            endTime: new Date().toISOString(),
+            gameLength: Math.floor((Date.now() - sessionStartTime) / 1000),
+            disputesDetected: disputeCount
+        };
+        localStorage.setItem('veritas_session', JSON.stringify(data));
+        if (recognition) { isPaused = true; recognition.stop(); }
+        window.location.href = 'index.html';
+    }
+
+    function addLog(msg, type = 'system') {
+        const c = document.getElementById('log-container');
+        const e = document.createElement('div');
+        e.className = `log-entry ${type}`;
+        e.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        c.appendChild(e);
+        c.scrollTop = c.scrollHeight;
+    }
+
+    function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+    // ═══════════════════════════════════════════════════════════════
+    // PARTICLES & INIT
+    // ═══════════════════════════════════════════════════════════════
+    function createParticles() {
+        const c = document.getElementById('particles');
+        for (let i = 0; i < 50; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.style.left = Math.random() * 100 + '%';
+            p.style.animationDelay = Math.random() * 20 + 's';
+            p.style.animationDuration = (15 + Math.random() * 10) + 's';
+            c.appendChild(p);
+        }
+    }
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeRuling();
+        if (e.key === ' ' && e.ctrlKey) { e.preventDefault(); togglePause(); }
+        if (e.key === 'r' && e.ctrlKey) { e.preventDefault(); repeatLastRuling(); }
+    });
+
+    window.addEventListener('load', () => {
+        createParticles();
+        setupSpeechRecognition();
+        addLog('Veritas is listening. Ask about keywords, rules, or card names.', 'system');
+        addLog(`${Object.keys(KEYWORDS).length} keywords loaded.`, 'system');
+
+        setInterval(() => {
+            const s = Math.floor((Date.now() - sessionStartTime) / 1000);
+            const h = Math.floor(s/3600).toString().padStart(2,'0');
+            const m = Math.floor((s%3600)/60).toString().padStart(2,'0');
+            const sec = (s%60).toString().padStart(2,'0');
+            document.getElementById('session-timer').textContent = `${h}:${m}:${sec}`;
+        }, 1000);
+
+        window.addEventListener('beforeunload', () => {
+            const data = { startTime: new Date(sessionStartTime).toISOString(), endTime: new Date().toISOString() };
+            localStorage.setItem('veritas_session', JSON.stringify(data));
         });
-
-        // ═══════════════════════════════════════
-        // INITIALIZATION
-        // ═══════════════════════════════════════
-        window.addEventListener('load', () => {
-            console.log('🎮 VERITAS GAME SESSION LOADED');
-            console.log('Keywords available:', Object.keys(keywords).length);
-            console.log('Speech API:', 'webkitSpeechRecognition' in window ? '✅' : '❌');
-
-            createParticles();
-            loadCardNames();
-            setupSpeechRecognition();
-
-            addLog('Veritas the Arbiter is listening...', 'system');
-            addLog('Try saying: "How does hexproof work?"', 'system');
-
-            // Update timer
-            setInterval(() => {
-                const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
-                const hours = Math.floor(elapsed / 3600).toString().padStart(2, '0');
-                const minutes = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
-                const seconds = (elapsed % 60).toString().padStart(2, '0');
-                document.getElementById('session-timer').textContent = `${hours}:${minutes}:${seconds}`;
-            }, 1000);
-
-            // Test keyword detection
-            const testText = "how does hexproof work";
-            const result = analyzeQuestion(testText);
-            console.log('Test result for "' + testText + '":', result);
-
-            // Save session data on unload
-            window.addEventListener('beforeunload', () => {
-                window.sessionData.endTime = new Date().toISOString();
-                localStorage.setItem('veritas_session', JSON.stringify(window.sessionData));
-            });
-        });
-
-        console.log('✅ Script loaded successfully');
+    });
     </script>
 </body>
 </html>
