@@ -1530,105 +1530,139 @@
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // DISPUTE DETECTOR
+    // CONVERSATION CONTEXT WINDOW
+    // Tracks the rolling table conversation — last 10 utterances
+    // Each entry: { text, timestamp, keywords: [] }
     // ═══════════════════════════════════════════════════════════════
-    const DISPUTE_PATTERNS = [
-        /\b(no|nope|wrong|incorrect|that'?s? (not|wrong)|not right)\b/i,
-        /\b(wait|hold on|hang on|stop|actually)\b/i,
-        /\b(i (think|disagree|don'?t think)|are you sure|check again|re-?check|verify that)\b/i,
-        /\b(dispute|challenge|objection|appeal|contest)\b/i,
-        /\b(but (that|this|it) (isn'?t?|is not|doesn'?t?|does not))\b/i,
-        /\b(that'?s? (wrong|incorrect|not how|not right|not true))\b/i,
-        /\b(you'?re? wrong|veritas is wrong|that rule is wrong)\b/i,
-        /\b(i (call|am calling) (bullshit|bs|dispute))\b/i
-    ];
+    const conversationBuffer = [];
+    const BUFFER_SIZE = 10;
 
-    function detectDispute(text) {
-        const matches = DISPUTE_PATTERNS.filter(p => p.test(text));
-        return {
-            isDispute: matches.length > 0,
-            confidence: matches.length >= 3 ? 'high' : matches.length === 2 ? 'medium' : matches.length === 1 ? 'low' : null
-        };
+    function bufferAdd(text) {
+        const lower = text.toLowerCase();
+        const foundKws = Object.keys(KEYWORDS).filter(k => lower.includes(k));
+        conversationBuffer.push({ text, lower, keywords: foundKws, timestamp: Date.now() });
+        if (conversationBuffer.length > BUFFER_SIZE) conversationBuffer.shift();
     }
 
-    // Re-analyze dispute text to find WHAT is being disputed
-    function extractDisputeTopic(text) {
+    // Scan buffer (newest first) for any keyword mentions in last N utterances
+    function recentKeywordsFromBuffer(lookback = 3) {
+        const recent = conversationBuffer.slice(-lookback);
+        const seen = new Set();
+        const kws = [];
+        for (let i = recent.length - 1; i >= 0; i--) {
+            for (const kw of recent[i].keywords) {
+                if (!seen.has(kw)) { seen.add(kw); kws.push(kw); }
+            }
+        }
+        return kws;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // CONTRADICTION DETECTOR
+    // These are the natural phrases players say mid-argument
+    // Designed to fire on INTERIM (partial) transcripts too
+    // ═══════════════════════════════════════════════════════════════
+
+    // Phrases that strongly signal "I disagree with what was just said"
+    const CONTRADICTION_TRIGGERS = [
+        // Direct contradictions
+        /\bno it (does|doesn'?t|did|didn'?t|can|can'?t|is|isn'?t)\b/i,
+        /\byes it (does|doesn'?t|did|didn'?t|can|can'?t|is|isn'?t)\b/i,
+        /\bthat'?s? not how( it| that)? works?\b/i,
+        /\bthat'?s? (wrong|incorrect|not right|not true)\b/i,
+        /\byou'?re? wrong\b/i,
+        /\bactually (it|that|no|yes|that'?s?)\b/i,
+        /\b(no|yes),? actually\b/i,
+        // "it doesn't work like that"
+        /\bit (doesn'?t?|does not) work like that\b/i,
+        /\bthat'?s? not what (it|the rule|that card) (says?|does|means?)\b/i,
+        // "you can't do that"
+        /\byou can'?t (do|use|play|attack|block|tap|sacrifice) that\b/i,
+        /\bthat'?s? not (allowed|legal|how|a thing)\b/i,
+        // Re-read the card
+        /\bread the card\b/i,
+        /\bcheck the ruling\b/i,
+        /\bask veritas\b/i
+    ];
+
+    let contradictionFired = false; // debounce — don't fire twice per disagreement
+
+    function checkForContradiction(text) {
+        return CONTRADICTION_TRIGGERS.some(p => p.test(text));
+    }
+
+    // Find the topic being contradicted:
+    // 1. Keywords in current text
+    // 2. Keywords from recent conversation buffer
+    // 3. Last ruling shown
+    function resolveContradictionTopic(text) {
         const lower = text.toLowerCase();
 
-        // 1. Check for keywords in the dispute sentence itself
-        const foundKws = Object.keys(KEYWORDS).filter(k => lower.includes(k));
-        if (foundKws.length >= 2) {
-            const interaction = getKnownInteraction(foundKws[0], foundKws[1]);
+        // 1. Current sentence keywords
+        const inSentence = Object.keys(KEYWORDS).filter(k => lower.includes(k));
+        if (inSentence.length >= 2) {
+            const interaction = getKnownInteraction(inSentence[0], inSentence[1]);
             if (interaction) return { type: 'semantic', data: interaction };
-            return { type: 'multi_keyword', keywords: foundKws };
+            return { type: 'multi_keyword', keywords: inSentence };
         }
-        if (foundKws.length === 1) return { type: 'keyword', keyword: foundKws[0] };
+        if (inSentence.length === 1) return { type: 'keyword', keyword: inSentence[0] };
 
-        // 2. Fall back to last ruling topic
-        if (lastRuling) return lastRuling.analysis;
+        // 2. Recent buffer (last 3 utterances)
+        const recentKws = recentKeywordsFromBuffer(3);
+        if (recentKws.length >= 2) {
+            const interaction = getKnownInteraction(recentKws[0], recentKws[1]);
+            if (interaction) return { type: 'semantic', data: interaction };
+            return { type: 'multi_keyword', keywords: recentKws };
+        }
+        if (recentKws.length === 1) return { type: 'keyword', keyword: recentKws[0] };
+
+        // 3. Last ruling
+        if (lastRuling?.analysis) return lastRuling.analysis;
 
         return null;
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // MAIN SPEECH HANDLER
+    // STATE
     // ═══════════════════════════════════════════════════════════════
     let lastRuling = null;
-    let lastRulingText = '';
     let isPaused = false;
-    let isProcessing = false;
     let disputeCount = 0;
     let sessionStartTime = Date.now();
     let recognition = null;
 
-    function handleSpeech(text) {
-        if (isProcessing || isPaused) return;
-        isProcessing = true;
+    // ═══════════════════════════════════════════════════════════════
+    // INTERIM HANDLER — fires on partial speech mid-sentence
+    // Only checks for contradiction signals, not full questions
+    // ═══════════════════════════════════════════════════════════════
+    function handleInterim(partialText) {
+        if (isPaused || contradictionFired) return;
+        if (!checkForContradiction(partialText)) return;
 
-        addLog('You: ' + text, 'player');
+        // Fire immediately
+        contradictionFired = true;
+        const topic = resolveContradictionTopic(partialText);
+        triggerContradictionRuling(topic, partialText);
+    }
 
-        // ── Run dispute detection in parallel ──
-        const dispute = detectDispute(text);
+    // ═══════════════════════════════════════════════════════════════
+    // FINAL HANDLER — fires on completed utterances
+    // Handles direct questions, card lookups, keyword lookups
+    // ═══════════════════════════════════════════════════════════════
+    function handleFinal(text) {
+        if (isPaused) return;
 
-        if (dispute.isDispute) {
-            disputeCount++;
-            document.getElementById('dispute-counter').textContent = `Disputes: ${disputeCount}`;
+        // Add to context buffer every time
+        bufferAdd(text);
+        addLog(text, 'player');
 
-            // Re-analyze the sentence for the disputed topic
-            const disputedAnalysis = extractDisputeTopic(text);
-
-            if (disputedAnalysis) {
-                const ruling = renderRuling(disputedAnalysis);
-                if (ruling) {
-                    showRuling(ruling, disputedAnalysis, { isDispute: true, confidence: dispute.confidence });
-                    speak('Dispute noted. Here is the official ruling.');
-                    addLog(`⚑ Dispute on: ${getRulingLabel(disputedAnalysis)}`, 'ruling');
-                    isProcessing = false;
-                    return;
-                }
-            }
-
-            // No topic found — show a generic dispute response
-            showRuling(`<div>
-                <div class="dispute-flag">
-                    <span class="dispute-flag-icon">⚑</span>
-                    <div class="dispute-flag-text">
-                        <strong>Dispute Detected</strong>
-                        No specific rule was mentioned — ask about the keyword or card being disputed.
-                    </div>
-                </div>
-                <div class="ruling-title">What are you disputing?</div>
-                <div class="ruling-answer-body" style="margin-top:16px;">
-                    Say the keyword or card name you disagree with, or tap a chip below to re-confirm a recent ruling.
-                </div>
-            </div>`, {}, { isDispute: true, confidence: dispute.confidence });
-            speak('Dispute detected. Please specify what rule you are disputing.');
-            addLog('⚑ Dispute detected — no topic identified', 'ruling');
-            isProcessing = false;
+        // If contradiction already fired on this utterance's interim, skip question flow
+        if (contradictionFired) {
+            contradictionFired = false; // reset for next utterance
             return;
         }
 
-        // ── Normal question flow ──
+        // Normal question / keyword / card flow
         const analysis = analyzeInput(text);
         const ruling = renderRuling(analysis);
 
@@ -1636,12 +1670,71 @@
             showRuling(ruling, analysis);
             const speakText = getSpokenText(analysis);
             if (speakText) speak(speakText);
-            addLog('Ruling given: ' + getRulingLabel(analysis), 'ruling');
+            addLog('Ruling: ' + getRulingLabel(analysis), 'ruling');
         } else {
-            showCardRuling(extractCardName(text));
+            // Try card lookup if nothing matched
+            const cleaned = extractCardName(text);
+            if (cleaned.length > 2) showCardRuling(cleaned);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // INTERRUPT SOUND — synthesized via Web Audio API, zero latency
+    // A short sharp two-tone chime that cuts through table noise
+    // ═══════════════════════════════════════════════════════════════
+    function playInterruptChime() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+            function tone(freq, startTime, duration, gainVal) {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, startTime);
+                gain.gain.setValueAtTime(0, startTime);
+                gain.gain.linearRampToValueAtTime(gainVal, startTime + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+                osc.start(startTime);
+                osc.stop(startTime + duration);
+            }
+
+            const now = ctx.currentTime;
+            tone(880, now,        0.12, 0.4);  // A5 — sharp attack
+            tone(1100, now + 0.1, 0.18, 0.3);  // C#6 — rising second tone
+        } catch(e) {
+            // Audio not available — silent fail
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // CONTRADICTION RULING — interrupt + flag
+    // ═══════════════════════════════════════════════════════════════
+    function triggerContradictionRuling(topic, triggerText) {
+        playInterruptChime(); // ← fires immediately, before anything else
+
+        disputeCount++;
+        document.getElementById('dispute-counter').textContent = `Disputes: ${disputeCount}`;
+        addLog(`⚑ Contradiction detected: "${triggerText.slice(0, 60)}…"`, 'ruling');
+
+        if (topic) {
+            const ruling = renderRuling(topic);
+            if (ruling) {
+                showRuling(ruling, topic, { isDispute: true });
+                return;
+            }
         }
 
-        isProcessing = false;
+        // Nothing found — prompt
+        showRuling(`<div>
+            <div class="ruling-title" style="margin-top:8px;">What's the dispute about?</div>
+            <div class="ruling-answer-body" style="margin-top:14px;font-size:15px;color:#aaa;">
+                Veritas heard a disagreement but couldn't identify the rule.<br><br>
+                Say the keyword or card name being disputed and Veritas will pull the ruling immediately.
+            </div>
+        </div>`, {}, { isDispute: true });
+        speak('What rule are you disputing?');
     }
 
     function getSpokenText(analysis) {
@@ -1777,16 +1870,26 @@
         }
         recognition = new SR();
         recognition.continuous = true;
-        recognition.interimResults = false;
+        recognition.interimResults = true; // ← interim so we catch contradictions mid-sentence
         recognition.lang = 'en-US';
 
         recognition.onstart = () => {
             document.getElementById('debug-info').textContent = 'Listening';
         };
+
         recognition.onresult = (e) => {
-            const t = e.results[e.results.length-1][0].transcript;
-            handleSpeech(t);
+            const result = e.results[e.results.length - 1];
+            const transcript = result[0].transcript;
+
+            if (result.isFinal) {
+                // Full sentence — route to final handler
+                handleFinal(transcript.trim());
+            } else {
+                // Partial transcript — only check for contradiction triggers
+                handleInterim(transcript.trim());
+            }
         };
+
         recognition.onerror = (e) => {
             if (e.error !== 'no-speech') addLog('Mic error: ' + e.error, 'system');
         };
@@ -1866,7 +1969,7 @@
         ];
         const t = tests[Math.floor(Math.random() * tests.length)];
         addLog(`Test: "${t}"`, 'system');
-        handleSpeech(t);
+        handleFinal(t);
     }
 
     function endSession() {
