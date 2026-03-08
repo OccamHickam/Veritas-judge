@@ -335,6 +335,52 @@
             box-shadow: 0 0 60px rgba(255,107,107,0.25);
         }
 
+        /* ═══ VERDICT BANNER ═══ */
+        .verdict-banner {
+            display: flex; align-items: center; gap: 14px;
+            border-radius: 14px; padding: 18px 22px;
+            margin-bottom: 22px;
+        }
+        .verdict-banner.yes  { background: rgba(78,205,196,0.12); border: 1px solid rgba(78,205,196,0.4); }
+        .verdict-banner.no   { background: rgba(255,107,107,0.12); border: 1px solid rgba(255,107,107,0.4); }
+        .verdict-banner.depends { background: rgba(255,230,109,0.1); border: 1px solid rgba(255,230,109,0.35); }
+        .verdict-banner.info { background: rgba(0,167,181,0.1); border: 1px solid rgba(0,167,181,0.3); }
+        .verdict-icon { font-size: 28px; line-height: 1; flex-shrink: 0; }
+        .verdict-text { flex: 1; }
+        .verdict-statement {
+            font-size: 20px; font-weight: 700; line-height: 1.3;
+            margin-bottom: 4px;
+        }
+        .verdict-banner.yes  .verdict-statement { color: #4ecdc4; }
+        .verdict-banner.no   .verdict-statement { color: #ff6b6b; }
+        .verdict-banner.depends .verdict-statement { color: #ffe66d; }
+        .verdict-banner.info .verdict-statement { color: #00a7b5; }
+        .verdict-reason { font-size: 13px; color: #999; line-height: 1.4; }
+
+        .ruling-body-text {
+            font-size: 15px; line-height: 1.8; color: #d0d0d0; margin-bottom: 20px;
+        }
+        .ruling-body-text .highlight { color: #fff; font-weight: 600; }
+        .ruling-body-text .teal { color: #4ecdc4; }
+        .ruling-body-text .gold { color: #ffe66d; }
+        .ruling-body-text .red  { color: #ff8080; }
+
+        .official-ruling {
+            margin-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.07);
+            padding-top: 16px;
+        }
+        .official-ruling-label {
+            font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px;
+            color: #555; font-weight: 600; margin-bottom: 8px;
+        }
+        .official-ruling-ref {
+            font-family: monospace; font-size: 12px; color: #444;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 6px; padding: 8px 12px; display: inline-block;
+        }
+
         /* ═══ RESPONSIVE ═══ */
         @media (max-width: 600px) {
             .card-ruling-grid { grid-template-columns: 1fr; }
@@ -1490,6 +1536,32 @@
         return null;
     }
 
+    // ─── Verdict banner helper ────────────────────────────────────────
+    // tagType: 'yes' | 'no' | 'depends' | 'info'
+    // statement: short plain-English verdict e.g. "Yes — you can block that"
+    // reason: one-line why, shown smaller beneath statement (optional)
+    function renderVerdict(tagType, statement, reason) {
+        const icons = { yes: '✓', no: '✗', depends: '⚠', info: 'ℹ' };
+        return `<div class="verdict-banner ${tagType || 'info'}">
+            <div class="verdict-icon">${icons[tagType] || 'ℹ'}</div>
+            <div class="verdict-text">
+                <div class="verdict-statement">${statement}</div>
+                ${reason ? `<div class="verdict-reason">${reason}</div>` : ''}
+            </div>
+        </div>`;
+    }
+
+    // ─── Official ruling footer ───────────────────────────────────────
+    function renderOfficialRuling(ruleRef, category) {
+        const cat = category ? `<span style="color:#555;margin-right:10px;">${category}</span>` : '';
+        return `<div class="official-ruling">
+            <div class="official-ruling-label">Official Ruling</div>
+            <div class="official-ruling-ref">${cat}Comprehensive Rules — ${ruleRef}</div>
+        </div>`;
+    }
+
+    // ─── Keyword ruling ───────────────────────────────────────────────
+    // Layout: verdict banner → plain explanation → example → nuances → official ruling → related
     function renderKeywordRuling(kw, d) {
         const relatedChips = (d.related || []).filter(r => KEYWORDS[r]).map(r =>
             `<span class="keyword-chip" onclick="quickLookup('${r}')">${r}</span>`
@@ -1499,41 +1571,48 @@
             `<p style="margin-bottom:6px; font-size:13px; color:#aaa;">• ${n}</p>`
         ).join('');
 
+        // Build a plain-English verdict statement from the plain field (strip HTML for the headline)
+        const plainText = d.plain.replace(/<[^>]+>/g, '').replace(/\s+/g,' ').trim();
+        // First sentence only for the verdict reason line
+        const firstSentence = plainText.split(/\.\s/)[0].replace(/\.$/, '');
+
         return `
             <div>
+                ${renderVerdict('info', kw.charAt(0).toUpperCase() + kw.slice(1), firstSentence)}
                 <div class="ruling-keyword-badge">${d.category}</div>
-                <div class="ruling-title">${kw.toUpperCase()}</div>
-                <div class="ruling-rule-ref">Comprehensive Rules — ${d.rule}</div>
-                <div class="ruling-plain">${d.plain}</div>
-                ${nuancesHtml ? `<div class="ruling-nuance"><div class="nuance-title">Key Nuances</div>${nuancesHtml}</div>` : ''}
-                <div class="ruling-example-box">
+                <div class="ruling-plain" style="margin-top:4px;">${d.plain}</div>
+                <div class="ruling-example-box" style="margin-top:18px;">
                     <div class="ex-label">📖 In Play</div>
                     <p>${d.example}</p>
                 </div>
-                ${relatedChips ? `<div class="ruling-also"><div class="ruling-also-label">Related Keywords</div><div class="keyword-chips">${relatedChips}</div></div>` : ''}
+                ${nuancesHtml ? `<div class="ruling-nuance"><div class="nuance-title">Key Nuances</div>${nuancesHtml}</div>` : ''}
+                ${renderOfficialRuling(d.rule, d.category)}
+                ${relatedChips ? `<div class="ruling-also" style="margin-top:16px;"><div class="ruling-also-label">Related Keywords</div><div class="keyword-chips">${relatedChips}</div></div>` : ''}
             </div>`;
     }
 
+    // ─── Semantic / context answer ────────────────────────────────────
+    // Layout: verdict banner → explanation body → example → nuance → official ruling → related
     function renderSemanticAnswer(d) {
-        const tagColors = { yes: 'yes', no: 'no', depends: 'depends', info: 'info' };
-        const tagHtml = d.tagLabel ? `<div class="ruling-answer-tag ${tagColors[d.tag] || 'info'}">${d.tagLabel}</div>` : '';
-
-        // Compare mode
+        // Compare mode gets its own layout — verdict at top, columns, then official ruling
         if (d.compareMode) {
             const colAItems = d.colA.map(i => `<li>${i}</li>`).join('');
             const colBItems = d.colB.map(i => `<li>${i}</li>`).join('');
             return `<div>
-                ${tagHtml}
-                <div class="ruling-title">${d.title}</div>
-                <div class="ruling-rule-ref">Rules — ${d.rule}</div>
+                ${renderVerdict('info', d.title, d.verdict ? d.verdict.replace(/<[^>]+>/g,'').substring(0,120) : '')}
                 <div class="compare-grid">
                     <div class="compare-col"><h4>${d.labelA}</h4><ul>${colAItems}</ul></div>
                     <div class="compare-col"><h4>${d.labelB}</h4><ul>${colBItems}</ul></div>
                 </div>
                 <div class="compare-verdict">${d.verdict}</div>
+                ${renderOfficialRuling(d.rule)}
                 ${renderRelated(d.related)}
             </div>`;
         }
+
+        // Build verdict statement from tagLabel + title
+        const verdictStatement = d.title || d.tagLabel || 'Ruling';
+        const verdictReason = d.tagLabel && d.title && d.tagLabel !== d.title ? d.tagLabel : '';
 
         const nuanceHtml = d.nuance ? `
             <div class="ruling-nuance">
@@ -1548,12 +1627,11 @@
             </div>` : '';
 
         return `<div>
-            ${tagHtml}
-            <div class="ruling-title">${d.title}</div>
-            <div class="ruling-rule-ref">Rules — ${d.rule}</div>
-            <div class="ruling-answer-body">${d.body || ''}</div>
-            ${nuanceHtml}
+            ${renderVerdict(d.tag || 'info', verdictStatement, verdictReason)}
+            <div class="ruling-body-text">${d.body || ''}</div>
             ${exampleHtml}
+            ${nuanceHtml}
+            ${renderOfficialRuling(d.rule)}
             ${renderRelated(d.related)}
         </div>`;
     }
@@ -1564,22 +1642,27 @@
             `<span class="keyword-chip" onclick="quickLookup('${r}')">${r}</span>`
         ).join('');
         if (!chips) return '';
-        return `<div class="ruling-also"><div class="ruling-also-label">Related</div><div class="keyword-chips">${chips}</div></div>`;
+        return `<div class="ruling-also" style="margin-top:16px;"><div class="ruling-also-label">Related</div><div class="keyword-chips">${chips}</div></div>`;
     }
 
     function renderMultiKeyword(kwList) {
         const items = kwList.slice(0, 4).map(kw => {
             const d = KEYWORDS[kw];
+            const plainText = d.plain.replace(/<[^>]+>/g,'').split(/\.\s/)[0];
             return `<div class="multi-kw-item">
                 <h3>${kw.toUpperCase()}</h3>
-                <div class="rule-ref">${d.category} — Rule ${d.rule}</div>
-                <p>${d.plain.replace(/<[^>]+>/g,'')}</p>
+                <div class="rule-ref">${d.category}</div>
+                <p>${plainText}.</p>
             </div>`;
         }).join('');
+        const kwNames = kwList.slice(0,4).map(k => k.charAt(0).toUpperCase()+k.slice(1)).join(' + ');
         return `<div>
-            <div class="ruling-answer-tag info">Multiple Keywords</div>
-            <div class="ruling-title" style="margin-bottom:20px;">Keywords Detected</div>
+            ${renderVerdict('info', kwNames, 'Multiple keywords detected — here's each one')}
             ${items}
+            <div class="official-ruling" style="margin-top:8px;">
+                <div class="official-ruling-label">Official Rulings</div>
+                ${kwList.slice(0,4).map(kw => `<div class="official-ruling-ref" style="margin-bottom:6px;">${kw.toUpperCase()} — CR ${KEYWORDS[kw].rule}</div>`).join('')}
+            </div>
         </div>`;
     }
 
