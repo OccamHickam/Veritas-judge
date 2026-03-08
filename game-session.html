@@ -1559,46 +1559,43 @@
 
     // ═══════════════════════════════════════════════════════════════
     // CONTRADICTION DETECTOR
-    // These are the natural phrases players say mid-argument
-    // Designed to fire on INTERIM (partial) transcripts too
+    // Tight patterns — must be clearly a rule disagreement, not casual speech
     // ═══════════════════════════════════════════════════════════════
 
-    // Phrases that strongly signal "I disagree with what was just said"
     const CONTRADICTION_TRIGGERS = [
-        // Direct contradictions
-        /\bno it (does|doesn'?t|did|didn'?t|can|can'?t|is|isn'?t)\b/i,
-        /\byes it (does|doesn'?t|did|didn'?t|can|can'?t|is|isn'?t)\b/i,
-        /\bthat'?s? not how( it| that)? works?\b/i,
-        /\bthat'?s? (wrong|incorrect|not right|not true)\b/i,
-        /\byou'?re? wrong\b/i,
-        /\bactually (it|that|no|yes|that'?s?)\b/i,
-        /\b(no|yes),? actually\b/i,
-        // "it doesn't work like that"
+        // Must have "it" or "that" + does/doesn't — specific enough to not false-fire
+        /\bno[,]? it (does|doesn'?t|did|didn'?t|can|can'?t|is|isn'?t)\b/i,
+        /\byes[,]? it (does|doesn'?t|did|didn'?t|can|can'?t|is|isn'?t)\b/i,
+        // "that's not how it works" — very specific phrase
+        /\bthat'?s? not how (it|that) works?\b/i,
         /\bit (doesn'?t?|does not) work like that\b/i,
-        /\bthat'?s? not what (it|the rule|that card) (says?|does|means?)\b/i,
-        // "you can't do that"
-        /\byou can'?t (do|use|play|attack|block|tap|sacrifice) that\b/i,
-        /\bthat'?s? not (allowed|legal|how|a thing)\b/i,
-        // Re-read the card
-        /\bread the card\b/i,
+        // "you're wrong" / "that's wrong" — needs both words
+        /\byou'?re? (wrong|incorrect)\b/i,
+        /\bthat'?s? (wrong|incorrect|not right)\b/i,
+        // "that's not what the rule says / the card says"
+        /\bthat'?s? not what (the rule|the card|it) (says?|does|means?)\b/i,
+        // "you can't do that" — rule-specific action words
+        /\byou can'?t (attack|block|tap|sacrifice|target|cast|play|equip|trigger) (that|it|with that)\b/i,
+        // Explicit calls to Veritas
+        /\bask veritas\b/i,
         /\bcheck the ruling\b/i,
-        /\bask veritas\b/i
+        /\bread the card\b/i
     ];
 
-    let contradictionFired = false; // debounce — don't fire twice per disagreement
-
+    // Require at least 3 words in the partial transcript before checking
+    // Avoids firing on single words like "no" or "actually"
     function checkForContradiction(text) {
+        const wordCount = text.trim().split(/\s+/).length;
+        if (wordCount < 3) return false;
         return CONTRADICTION_TRIGGERS.some(p => p.test(text));
     }
 
-    // Find the topic being contradicted:
-    // 1. Keywords in current text
-    // 2. Keywords from recent conversation buffer
-    // 3. Last ruling shown
+    // Resolve contradiction topic — NEVER does a card lookup
+    // Only returns keyword rules and semantic answers
     function resolveContradictionTopic(text) {
         const lower = text.toLowerCase();
 
-        // 1. Current sentence keywords
+        // 1. Keywords in current sentence
         const inSentence = Object.keys(KEYWORDS).filter(k => lower.includes(k));
         if (inSentence.length >= 2) {
             const interaction = getKnownInteraction(inSentence[0], inSentence[1]);
@@ -1607,7 +1604,7 @@
         }
         if (inSentence.length === 1) return { type: 'keyword', keyword: inSentence[0] };
 
-        // 2. Recent buffer (last 3 utterances)
+        // 2. Scan recent buffer for keywords (last 3 utterances)
         const recentKws = recentKeywordsFromBuffer(3);
         if (recentKws.length >= 2) {
             const interaction = getKnownInteraction(recentKws[0], recentKws[1]);
@@ -1616,10 +1613,12 @@
         }
         if (recentKws.length === 1) return { type: 'keyword', keyword: recentKws[0] };
 
-        // 3. Last ruling
-        if (lastRuling?.analysis) return lastRuling.analysis;
+        // 3. Last ruling shown — but only if it's a keyword/semantic, not a card
+        if (lastRuling?.analysis?.type === 'keyword') return lastRuling.analysis;
+        if (lastRuling?.analysis?.type === 'semantic') return lastRuling.analysis;
+        if (lastRuling?.analysis?.type === 'multi_keyword') return lastRuling.analysis;
 
-        return null;
+        return null; // never falls through to card lookup
     }
 
     // ═══════════════════════════════════════════════════════════════
