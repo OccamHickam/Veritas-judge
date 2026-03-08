@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Veritas - Game Session</title>
     <style>
+        /* ═══ BACKGROUND ═══ */
         * {
             margin: 0;
             padding: 0;
@@ -12,11 +13,11 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #0a0a0f;
             color: #e0e0e0;
-            overflow: hidden;
-            height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
         }
 
         #particles {
@@ -31,312 +32,270 @@
 
         .particle {
             position: absolute;
-            width: 4px;
-            height: 4px;
-            background: rgba(0, 167, 181, 0.6);
+            width: 2px;
+            height: 2px;
+            background: #00a7b5;
             border-radius: 50%;
-            animation: float 15s infinite;
+            opacity: 0.3;
+            animation: float 20s infinite linear;
         }
 
         @keyframes float {
-            0%, 100% {
-                transform: translateY(100vh) rotate(0deg);
-                opacity: 0;
-            }
-            10% {
-                opacity: 1;
-            }
-            90% {
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(-100vh) rotate(720deg);
-                opacity: 0;
-            }
+            from { transform: translateY(100vh) translateX(0); }
+            to { transform: translateY(-100vh) translateX(100px); }
         }
 
+        /* ═══ LAYOUT ═══ */
         #game-session {
             position: relative;
             z-index: 1;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 100px 20px 40px;
         }
 
+        /* ═══ TOP BAR ═══ */
+        .status-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #00a7b5;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .timer {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00a7b5;
+            font-family: 'Courier New', monospace;
+        }
+
+        .dispute-counter {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid #ff6b6b;
+            color: #ff6b6b;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .debug-info {
+            font-size: 12px;
+            color: #666;
+            font-family: monospace;
+        }
+
+        .end-session-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(10, 10, 15, 0.9);
+            border: 2px solid #00a7b5;
+            color: #00a7b5;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+            z-index: 20;
+        }
+
+        .end-session-btn:hover {
+            background: #00a7b5;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* ═══ QUICK ACTIONS ═══ */
         .quick-actions-bar {
-            position: absolute;
-            top: 100px;
-            left: 50%;
-            transform: translateX(-50%);
             display: flex;
             gap: 10px;
-            z-index: 5;
+            margin-bottom: 30px;
             flex-wrap: wrap;
             justify-content: center;
         }
 
         .quick-action-btn {
-            background: rgba(10, 10, 15, 0.9);
-            border: 1px solid rgba(0, 167, 181, 0.3);
+            background: rgba(0, 167, 181, 0.1);
+            border: 1px solid #00a7b5;
             color: #00a7b5;
             padding: 10px 20px;
             border-radius: 20px;
-            font-size: 14px;
             cursor: pointer;
+            font-size: 14px;
             transition: all 0.3s;
-            backdrop-filter: blur(10px);
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
 
         .quick-action-btn:hover {
-            background: rgba(0, 167, 181, 0.2);
-            border-color: #00a7b5;
+            background: #00a7b5;
+            color: white;
             transform: translateY(-2px);
         }
 
-        .quick-action-btn:active {
-            transform: translateY(0);
-        }
-
+        /* ═══ LISTENING INDICATOR ═══ */
         .listening-container {
             text-align: center;
-            margin-bottom: 40px;
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            margin-bottom: 30px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .listening-container.active {
+            border-color: #00a7b5;
+            box-shadow: 0 0 30px rgba(0, 167, 181, 0.3);
         }
 
         .listening-pulse {
-            width: 200px;
-            height: 200px;
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(0, 167, 181, 0.3) 0%, transparent 70%);
-            animation: pulse 2s ease-in-out infinite;
-            margin: 0 auto 30px;
+            background: rgba(0, 167, 181, 0.2);
+            margin: 0 auto 20px;
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
         }
 
-        .listening-pulse.thinking {
-            animation: spin 1s linear infinite;
-            background: radial-gradient(circle, rgba(201, 168, 106, 0.5) 0%, transparent 70%);
-        }
-
-        .listening-pulse.speaking {
-            animation: bounce 0.5s ease-in-out infinite;
-            background: radial-gradient(circle, rgba(0, 167, 181, 0.6) 0%, transparent 70%);
-        }
-
-        .listening-pulse.waiting {
-            animation: pulse 2s ease-in-out infinite;
-            background: radial-gradient(circle, rgba(100, 100, 100, 0.3) 0%, transparent 70%);
-            opacity: 0.5;
-        }
-
-        .listening-pulse.paused {
-            animation: none;
-            background: radial-gradient(circle, rgba(100, 100, 100, 0.2) 0%, transparent 70%);
-            opacity: 0.3;
+        .listening-container.active .listening-pulse {
+            animation: pulse 2s infinite;
         }
 
         @keyframes pulse {
-            0%, 100% {
-                transform: scale(1);
-                opacity: 0.5;
-            }
-            50% {
-                transform: scale(1.1);
-                opacity: 1;
-            }
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        @keyframes bounce {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.2); }
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
         }
 
         .mic-icon {
-            font-size: 60px;
+            font-size: 32px;
             color: #00a7b5;
-            z-index: 2;
         }
 
         .status-text {
             font-size: 24px;
             color: #00a7b5;
             margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 3px;
         }
 
         .status-subtext {
             font-size: 14px;
-            color: #8892b0;
+            color: #666;
         }
 
-        .log-container {
+        /* ═══ CONFIDENCE INDICATOR ═══ */
+        .confidence-indicator {
             position: fixed;
             bottom: 20px;
-            left: 20px;
             right: 20px;
-            max-height: 200px;
-            overflow-y: auto;
             background: rgba(10, 10, 15, 0.9);
-            border: 1px solid rgba(0, 167, 181, 0.2);
-            border-radius: 10px;
+            border: 1px solid #333;
             padding: 15px;
-            z-index: 10;
+            border-radius: 10px;
+            display: none;
+            z-index: 100;
+        }
+
+        .confidence-indicator.show {
+            display: block;
+        }
+
+        .confidence-indicator.high {
+            border-color: #4ecdc4;
+            box-shadow: 0 0 20px rgba(78, 205, 196, 0.5);
+        }
+
+        .confidence-indicator.medium {
+            border-color: #ffe66d;
+            box-shadow: 0 0 20px rgba(255, 230, 109, 0.5);
+        }
+
+        .confidence-indicator.low {
+            border-color: #ff6b6b;
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+        }
+
+        /* ═══ LOG ═══ */
+        .log-container {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
         }
 
         .log-entry {
-            margin-bottom: 8px;
-            font-size: 13px;
-            padding: 5px;
-            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
         }
 
         .log-entry.player {
-            color: #c9a86a;
-            background: rgba(201, 168, 106, 0.1);
-        }
-
-        .log-entry.arbiter {
-            color: #00a7b5;
             background: rgba(0, 167, 181, 0.1);
+            border-left: 3px solid #00a7b5;
         }
 
         .log-entry.system {
-            color: #8892b0;
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 3px solid #666;
             font-style: italic;
         }
 
+        .log-entry.ruling {
+            background: rgba(78, 205, 196, 0.1);
+            border-left: 3px solid #4ecdc4;
+        }
+
+        /* ═══ RULING OVERLAY ═══ */
         .ruling-overlay {
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(10, 10, 15, 0.95);
-            z-index: 100;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
             display: none;
             align-items: center;
             justify-content: center;
-            padding: 40px;
-            overflow-y: auto;
+            z-index: 1000;
+            padding: 20px;
         }
 
-        .ruling-overlay.active {
+        .ruling-overlay.show {
             display: flex;
         }
 
         .ruling-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 2px solid #00a7b5;
+            border-radius: 20px;
+            padding: 40px;
             max-width: 800px;
-            width: 100%;
-            animation: slideUp 0.3s ease-out;
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .card-ruling {
-            display: flex;
-            gap: 30px;
-            align-items: flex-start;
-        }
-
-        .card-image-container {
-            flex-shrink: 0;
-            width: 300px;
-            height: 420px;
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-        }
-
-        .card-image-container img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .card-placeholder {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #4a5568;
-            font-size: 14px;
-        }
-
-        .card-details {
-            flex: 1;
-            text-align: left;
-        }
-
-        .card-name {
-            font-size: 28px;
-            color: #00a7b5;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .card-type {
-            color: #8892b0;
-            font-size: 14px;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .oracle-box {
-            background: rgba(0, 0, 0, 0.5);
-            border-left: 3px solid #00a7b5;
-            padding: 20px;
-            border-radius: 0 10px 10px 0;
-            margin-bottom: 20px;
-            line-height: 1.6;
-        }
-
-        .rulings-box {
-            background: rgba(201, 168, 106, 0.1);
-            border-left: 3px solid #c9a86a;
-            padding: 20px;
-            border-radius: 0 10px 10px 0;
-        }
-
-        .rulings-box h3 {
-            color: #c9a86a;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 10px;
-        }
-
-        .ruling-item {
-            margin-bottom: 10px;
-            font-size: 14px;
-            line-height: 1.5;
-            color: #e0e0e0;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0, 167, 181, 0.3);
         }
 
         .close-btn {
@@ -344,814 +303,553 @@
             top: 20px;
             right: 20px;
             background: none;
-            border: 2px solid #00a7b5;
+            border: none;
             color: #00a7b5;
-            padding: 10px 20px;
-            border-radius: 25px;
+            font-size: 24px;
             cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
         }
 
-        .close-btn:hover {
-            background: #00a7b5;
-            color: #0a0a0f;
-        }
-
-        .keyword-ruling {
-            text-align: left;
-        }
-
-        .keyword-title {
-            font-size: 32px;
+        /* ═══ KEYWORD RULING ═══ */
+        .keyword-ruling h2 {
             color: #00a7b5;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 3px;
+            margin-bottom: 20px;
+            font-size: 32px;
         }
 
         .keyword-rule {
-            color: #c9a86a;
-            font-size: 14px;
-            margin-bottom: 30px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+            background: rgba(0, 167, 181, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-family: 'Courier New', monospace;
+            color: #4ecdc4;
         }
 
         .keyword-description {
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .keyword-example {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #ffe66d;
+        }
+
+        .keyword-example h4 {
+            color: #ffe66d;
+            margin-bottom: 10px;
+        }
+
+        /* ═══ CARD RULING ═══ */
+        .card-ruling {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 30px;
+        }
+
+        .card-image-container {
             background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .card-image {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .card-details h2 {
+            color: #00a7b5;
+            margin-bottom: 10px;
+        }
+
+        .card-type {
+            color: #666;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        .oracle-box {
+            background: rgba(255, 255, 255, 0.05);
             padding: 20px;
             border-radius: 10px;
             margin-bottom: 20px;
             line-height: 1.6;
-            font-size: 16px;
         }
 
-        .keyword-example {
-            background: rgba(201, 168, 106, 0.1);
-            border-left: 3px solid #c9a86a;
+        .rulings-box {
+            background: rgba(0, 167, 181, 0.05);
             padding: 20px;
-            border-radius: 0 10px 10px 0;
-            margin-bottom: 20px;
+            border-radius: 10px;
         }
 
-        .keyword-example h4 {
-            color: #c9a86a;
+        .rulings-box h4 {
+            color: #4ecdc4;
             margin-bottom: 10px;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
         }
 
-        .confidence-indicator {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            display: none;
-        }
-
-        .confidence-indicator.high {
-            background: rgba(0, 255, 0, 0.2);
-            color: #00ff00;
-            border: 1px solid #00ff00;
-            display: block;
-        }
-
-        .confidence-indicator.medium {
-            background: rgba(255, 165, 0, 0.2);
-            color: #ffa500;
-            border: 1px solid #ffa500;
-            display: block;
-        }
-
-        .confidence-indicator.low {
-            background: rgba(255, 0, 0, 0.2);
-            color: #ff0000;
-            border: 1px solid #ff0000;
-            display: block;
-        }
-
-        .status-bar {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 10;
-        }
-
-        .timer {
-            color: #8892b0;
-            font-size: 14px;
-        }
-
-        .dispute-counter {
-            color: #00a7b5;
-            font-size: 14px;
-        }
-
-        .debug-info {
-            color: #4a5568;
-            font-size: 12px;
-            margin-top: 5px;
-        }
-
+        /* ═══ COMBO DISPLAY ═══ */
         .combo-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
-            margin-bottom: 20px;
+            margin-top: 20px;
         }
 
         .combo-card {
-            text-align: center;
-        }
-
-        .combo-card img {
-            max-width: 100%;
-            height: auto;
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 10px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #333;
+            transition: all 0.3s;
         }
 
-        .combo-card h3 {
-            color: #00a7b5;
-            margin-top: 10px;
-            font-size: 16px;
+        .combo-card:hover {
+            border-color: #00a7b5;
+            transform: translateY(-5px);
         }
 
+        /* ═══ RESPONSIVE ═══ */
         @media (max-width: 768px) {
             .card-ruling {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-bar {
                 flex-direction: column;
+                gap: 10px;
+                padding: 10px;
             }
-
-            .card-image-container {
-                width: 100%;
-                max-width: 300px;
-                margin: 0 auto;
+            
+            .timer {
+                font-size: 18px;
             }
-
-            .quick-actions-bar {
-                top: 80px;
-                gap: 5px;
-            }
-
-            .quick-action-btn {
-                padding: 8px 12px;
-                font-size: 12px;
+            
+            .end-session-btn {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin-top: 10px;
             }
         }
     </style>
+    <base target="_blank">
 <base target="_blank">
 </head>
 <body>
+    <!-- End Session Button -->
+    <button class="end-session-btn" onclick="endSession()">← End Session</button>
+
+    <!-- Background -->
     <div id="particles"></div>
 
+    <!-- Status Bar -->
     <div class="status-bar">
-        <div>
-            <div class="timer" id="timer">Session: 0m</div>
-            <div class="debug-info" id="debug">Waiting for disputes...</div>
-        </div>
+        <div class="timer" id="session-timer">00:00:00</div>
         <div class="dispute-counter" id="dispute-counter">Disputes: 0</div>
+        <div class="debug-info" id="debug-info">Ready</div>
     </div>
 
+    <!-- Main Session -->
     <div id="game-session">
+        <!-- Quick Actions -->
         <div class="quick-actions-bar">
-            <button class="quick-action-btn" onclick="togglePause()" id="pause-btn">
-                <span id="pause-icon">⏸️</span>
-                <span id="pause-text">Pause</span>
-            </button>
-            <button class="quick-action-btn" onclick="repeatLastRuling()">
-                🔄 Repeat
-            </button>
-            <button class="quick-action-btn" onclick="showManualSearch()">
-                🔍 Search Card
-            </button>
-            <button class="quick-action-btn" onclick="showRuleReference()">
-                📖 Rule Lookup
-            </button>
-            <button class="quick-action-btn" onclick="testManually()">
-                🧪 Test (no voice)
-            </button>
+            <button class="quick-action-btn" onclick="togglePause()">⏯️ Pause/Resume</button>
+            <button class="quick-action-btn" onclick="repeatLastRuling()">🔄 Repeat Last</button>
+            <button class="quick-action-btn" onclick="showManualSearch()">🔍 Manual Search</button>
+            <button class="quick-action-btn" onclick="showRuleReference()">📚 Rule Reference</button>
+            <button class="quick-action-btn" onclick="testManually()">🧪 Test</button>
         </div>
 
+        <!-- Confidence Indicator -->
         <div class="confidence-indicator" id="confidence-indicator">
-            Confidence: <span id="confidence-level">High</span>
+            <div>Confidence: <span id="confidence-level">-</span></div>
         </div>
 
-        <div class="listening-container">
-            <div class="listening-pulse" id="pulse">
-                <div class="mic-icon">🎙️</div>
+        <!-- Listening Indicator -->
+        <div class="listening-container active" id="listening-container">
+            <div class="listening-pulse">
+                <div class="mic-icon">🎤</div>
             </div>
-            <div class="status-text" id="main-text">Listening</div>
-            <div class="status-subtext" id="sub-text">The Arbiter hears all disputes</div>
+            <div class="status-text" id="status-text">Listening...</div>
+            <div class="status-subtext" id="status-subtext">Speak a card name or ask a question</div>
         </div>
     </div>
 
+    <!-- Log -->
     <div class="log-container" id="log-container"></div>
 
-    <div class="ruling-overlay" id="ruling-overlay">
-        <button class="close-btn" onclick="closeRuling()">Close</button>
-        <div class="ruling-content" id="ruling-content"></div>
+    <!-- Ruling Overlay -->
+    <div class="ruling-overlay" id="ruling-overlay" onclick="closeRuling(event)">
+        <div class="ruling-content" onclick="event.stopPropagation()">
+            <button class="close-btn" onclick="closeRuling()">✕</button>
+            <div id="ruling-body"></div>
+        </div>
     </div>
 
     <script>
+        console.log('🎮 Veritas Game Session Loading...');
 
-        // ==========================================
+        // ═══════════════════════════════════════
         // KEYWORD DATABASE
-        // ==========================================
+        // ═══════════════════════════════════════
         const keywords = {
-            trample: {
-                description: "Trample allows excess combat damage to be assigned to the defending player or planeswalker after lethal damage has been assigned to all blocking creatures.",
-                example: "A 6/6 creature with trample blocked by a 2/2 assigns 2 damage to the blocker (lethal) and the remaining 4 damage tramples over to the player.",
-                rule: "702.19b"
+            'trample': {
+                rule: '702.19b',
+                description: 'The controller of an attacking creature with trample first assigns damage to the creature(s) blocking it. Once all those blocking creatures are assigned lethal damage, any excess damage is assigned as its controller chooses among those blocking creatures and the player or planeswalker the creature is attacking.',
+                example: 'You attack with a 6/6 creature with trample. It is blocked by a 2/2 creature. You assign 2 damage to the blocker (lethal) and the remaining 4 damage tramples over to the defending player.'
             },
-            hexproof: {
-                description: "Hexproof means the permanent cannot be targeted by spells or abilities your opponents control. You can still target your own hexproof permanents.",
-                example: "Your opponent cannot cast Doom Blade on your hexproof creature, but you can still cast Giant Growth on it.",
-                rule: "702.11c"
+            'hexproof': {
+                rule: '702.11c',
+                description: '"Hexproof" on a permanent means "This permanent can\'t be the target of spells or abilities your opponents control."',
+                example: 'Your opponent cannot cast Doom Blade on your hexproof creature, but they can still destroy it with board wipes like Wrath of God that don\'t target.'
             },
-            shroud: {
-                description: "Shroud means the permanent cannot be targeted by any spells or abilities, including yours. Only effects that don't target can affect it.",
-                example: "You cannot cast Giant Growth on your own shroud creature. You need effects like 'all creatures get +1/+1' that don't target.",
-                rule: "702.18a"
+            'deathtouch': {
+                rule: '702.2b',
+                description: 'A creature with toughness greater than 0 that\'s been dealt damage by a source with deathtouch since the last time state-based actions were checked is destroyed as a state-based action.',
+                example: 'A 1/1 creature with deathtouch blocks a 10/10 creature. Both deal damage, and both are destroyed because 1 damage is lethal from deathtouch.'
             },
-            deathtouch: {
-                description: "Deathtouch means any amount of damage this creature deals to another creature is lethal. Even 1 damage destroys the other creature.",
-                example: "A 1/1 with deathtouch blocks a 10/10. Both deal damage, but the 10/10 dies because it took damage from a source with deathtouch.",
-                rule: "702.2b"
+            'flying': {
+                rule: '702.9b',
+                description: 'A creature with flying can\'t be blocked except by creatures with flying and/or reach.',
+                example: 'Your creature with flying can attack past ground creatures, but can be blocked by other flying creatures or creatures with reach.'
             },
-            lifelink: {
-                description: "Lifelink means you gain life equal to the damage dealt by this source. This happens simultaneously with the damage being dealt.",
-                example: "A 5/5 with lifelink deals 5 damage to a creature. You immediately gain 5 life at the same time the damage is dealt.",
-                rule: "702.15b"
+            'haste': {
+                rule: '702.10b',
+                description: 'A creature with haste can attack and tap as soon as it comes under its controller\'s control.',
+                example: 'You can cast a creature with haste and attack with it immediately, or use its tap ability right away.'
             },
-            flying: {
-                description: "Flying means this creature can only be blocked by creatures with flying or reach. It can block creatures without flying normally.",
-                example: "A creature with flying attacks. Only creatures with flying or reach can be declared as blockers against it.",
-                rule: "702.9b"
+            'vigilance': {
+                rule: '702.20b',
+                description: 'Attacking doesn\'t cause creatures with vigilance to tap.',
+                example: 'A creature with vigilance can attack and still be able to block on your opponent\'s turn, or use tap abilities after attacking.'
             },
-            haste: {
-                description: "Haste allows a creature to attack and use activated abilities with the tap symbol immediately, without being affected by summoning sickness.",
-                example: "You play a creature with haste. On the same turn, you can immediately attack with it or tap it for an activated ability.",
-                rule: "702.10"
+            'first strike': {
+                rule: '702.7b',
+                description: 'If at least one attacking or blocking creature has first strike or double strike as the combat damage step begins, the only creatures that assign combat damage in that step are those with first strike or double strike.',
+                example: 'A 2/2 with first strike blocks a 3/3 without first strike. The 2/2 deals damage first, killing the 3/3 before it can deal damage back.'
             },
-            vigilance: {
-                description: "Vigilance means the creature does not tap when attacking. It remains untapped and can block or use tap abilities after attacking.",
-                example: "A creature with vigilance attacks. After combat, it is still untapped and can block your opponent's creatures.",
-                rule: "702.20b"
+            'double strike': {
+                rule: '702.8b',
+                description: 'A creature with double strike deals damage during the first combat damage step in addition to the second combat damage step.',
+                example: 'A 3/3 with double strike deals 3 damage in the first strike damage step, then 3 more in the normal damage step, for 6 total damage.'
             },
-            "first strike": {
-                description: "First strike means this creature deals combat damage before creatures without first strike. If it destroys the blocker, the blocker deals no damage back.",
-                example: "A 3/3 with first strike blocks a 5/5. The 3/3 deals damage first, killing the 5/5 before it can deal damage back.",
-                rule: "702.7b"
+            'reach': {
+                rule: '702.17b',
+                description: 'A creature with reach can block creatures with flying as though it had flying.',
+                example: 'Your creature with reach can block flying creatures, but doesn\'t have flying itself for purposes of being blocked.'
             },
-            "double strike": {
-                description: "Double strike means this creature deals combat damage twice - once during the first strike damage step, and again during normal damage.",
-                example: "A 3/3 with double strike deals 3 damage in first strike, then 3 more damage in regular combat. Total 6 damage.",
-                rule: "702.8b"
+            'indestructible': {
+                rule: '702.12b',
+                description: 'A permanent with indestructible can\'t be destroyed. Such permanents aren\'t destroyed by lethal damage, and they ignore the "destroy" effect of state-based actions.',
+                example: 'Your indestructible creature can survive Wrath of God and combat with larger creatures, but can still be exiled, bounced, or have toughness reduced to 0.'
             },
-            indestructible: {
-                description: "Indestructible means the permanent cannot be destroyed by damage or 'destroy' effects. It can still be exiled, sacrificed, or have toughness reduced to 0.",
-                example: "Wrath of God says 'destroy all creatures' but your indestructible creature survives. However, it dies if its toughness becomes 0.",
-                rule: "702.12b"
+            'lifelink': {
+                rule: '702.15b',
+                description: 'Damage dealt by a source with lifelink causes that source\'s controller to gain that much life.',
+                example: 'A 5/5 with lifelink deals 5 damage to a creature. You gain 5 life at the same time the damage is dealt.'
             },
-            menace: {
-                description: "Menace means this creature can only be blocked by two or more creatures. A single creature cannot block it alone.",
-                example: "A creature with menace attacks. Your opponent must assign at least two creatures to block it, or let it through unblocked.",
-                rule: "702.110b"
+            'menace': {
+                rule: '702.110b',
+                description: 'A creature with menace can\'t be blocked except by two or more creatures.',
+                example: 'Your 3/3 with menace attacks. Your opponent must block with at least two creatures, or let it through unblocked.'
             },
-            reach: {
-                description: "Reach allows a creature to block creatures with flying as though it had flying. It does not allow the creature to attack as though it had flying.",
-                example: "A creature with reach can block flying creatures, but cannot attack over ground creatures unless it also has flying.",
-                rule: "702.17b"
+            'flash': {
+                rule: '702.8a',
+                description: 'Flash is a static ability that functions in any zone from which you could play the card it\'s on. "Flash" means "You may play this card any time you could cast an instant."',
+                example: 'You can cast a creature with flash during your opponent\'s combat phase to block, or at end of their turn to avoid sorcery-speed removal.'
             },
-            "the stack": {
-                description: "The stack is where spells and abilities wait to resolve. Last in, first out. Players can respond to items on the stack before they resolve.",
-                example: "Player casts Lightning Bolt (goes on stack). Opponent responds with Counterspell (goes on top). Counterspell resolves first, countering the Bolt.",
-                rule: "405.1"
+            'protection': {
+                rule: '702.16e',
+                description: 'Any damage that would be dealt by sources that have the stated quality to a permanent or player with protection is prevented.',
+                example: 'A creature with protection from red can\'t be damaged, enchanted, blocked, or targeted by anything red.'
             },
-            "commander tax": {
-                description: "Commander tax is an additional cost of {2} for each time you've cast your commander from the command zone this game.",
-                example: "First cast: normal cost. Second cast: cost + {2}. Third cast: cost + {4}. Tax applies even if commander was countered.",
-                rule: "903.8"
+            'shroud': {
+                rule: '702.18b',
+                description: '"Shroud" means "This permanent or player can\'t be the target of spells or abilities."',
+                example: 'Unlike hexproof, shroud prevents targeting by anyone, including you. You can\'t equip it or target it with your own spells.'
             },
-            "commander damage": {
-                description: "If a player is dealt 21 or more combat damage by the same commander over the course of the game, they lose the game.",
-                example: "Your commander deals 10 damage to an opponent. Later it deals 11 more. That opponent loses because they took 21 commander damage.",
-                rule: "903.10a"
+            'defender': {
+                rule: '702.3b',
+                description: 'A creature with defender can\'t attack.',
+                example: 'Walls and other creatures with defender can block normally but cannot attack. Some have special abilities that trigger when they block.'
             },
-            priority: {
-                description: "Priority determines who can cast spells and activate abilities. The active player gets priority first, then it passes clockwise.",
-                example: "During your main phase, you have priority first. You cast a spell, then pass priority. Opponent can respond before it resolves.",
-                rule: "117.1"
+            'prowess': {
+                rule: '702.107a',
+                description: 'Prowess is a triggered ability. "Prowess" means "Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn."',
+                example: 'You cast an instant. Your creature with prowess gets +1/+1 until end of turn. Cast another spell, it gets another +1/+1.'
             },
-            "mana ability": {
-                description: "Mana abilities are activated or triggered abilities that add mana to your mana pool. They don't use the stack and resolve immediately.",
-                example: "Tapping a Forest for green mana is a mana ability. It happens immediately and cannot be responded to or countered.",
-                rule: "605.1"
+            'enchant': {
+                rule: '702.5a',
+                description: 'Enchant is a static ability, written "Enchant [object or player]." The enchant ability restricts what an Aura can target and what an Aura can enchant.',
+                example: 'An Aura with "Enchant creature" can only target and attach to creatures. If the enchanted creature leaves play, the Aura goes to the graveyard.'
             },
-            "replacement effect": {
-                description: "Replacement effects replace one event with another. They use the word 'instead' and happen before the original event would occur.",
-                example: "'If you would draw a card, instead draw two cards' replaces your draw with two draws. You never actually drew just one.",
-                rule: "614.1"
+            'equip': {
+                rule: '702.6a',
+                description: 'Equip is an activated ability of Equipment cards. "Equip [cost]" means "[Cost]: Attach this permanent to target creature you control."',
+                example: 'You pay the equip cost to attach the Equipment to one of your creatures. You can move it to another creature by paying the cost again.'
             },
-            "state-based actions": {
-                description: "State-based actions are game rules that check for things like zero toughness or lethal damage. They don't use the stack and happen automatically.",
-                example: "A 2/2 with 2 damage marked dies immediately to state-based actions before any player gets priority. It's not destroyed - it just dies.",
-                rule: "704.1"
+            'fight': {
+                rule: '701.12',
+                description: 'When two creatures fight, each deals damage equal to its power to the other.',
+                example: 'Your 3/3 fights their 2/2. Your 3/3 deals 3 damage to the 2/2 (killing it), and their 2/2 deals 2 damage to your 3/3 (leaving it as a 3/1).'
             },
-            legendary: {
-                description: "Legendary is a supertype. If you control two or more legendary permanents with the same name, you choose one to keep and put the rest into your graveyard.",
-                example: "You control two copies of the same legendary creature. State-based actions make you put one into your graveyard.",
-                rule: "704.5j"
+            'sacrifice': {
+                rule: '701.15a',
+                description: 'To sacrifice a permanent, its controller moves it from the battlefield directly to its owner\'s graveyard.',
+                example: 'You cast a spell that says "Sacrifice a creature." You choose one of your creatures and put it into your graveyard. You don\'t get any "dies" triggers.'
             },
-            planeswalker: {
-                description: "Planeswalkers are permanents that enter with loyalty counters. They can be attacked and damaged. If loyalty reaches 0, they go to graveyard.",
-                example: "A planeswalker enters with 3 loyalty. It can be attacked directly. Each point of damage removes one loyalty counter.",
-                rule: "306.5"
+            'counter': {
+                rule: '701.5a',
+                description: 'To counter a spell or ability means to cancel it, removing it from the stack.',
+                example: 'You cast Counterspell targeting their Lightning Bolt. When Counterspell resolves, Lightning Bolt is removed from the stack and does nothing.'
             },
-            exile: {
-                description: "Exile removes a card from the game entirely. Exiled cards go to the exile zone and most effects can't interact with them.",
-                example: "Path to Exile exiles a creature. That creature is removed from the game and doesn't trigger 'dies' abilities.",
-                rule: "406.1"
+            'exile': {
+                rule: '406.3',
+                description: 'Exile is a game zone outside the field of play. It is essentially a holding area for objects.',
+                example: 'Path to Exile exiles a creature. The creature doesn\'t die, so "dies" triggers don\'t happen. It can return with effects like flicker.'
             },
-            tapped: {
-                description: "Tapped permanents are turned sideways. They cannot attack or block (if creatures) and cannot be tapped again for costs.",
-                example: "You tap a creature to attack with it. While tapped, it cannot block. It untaps during your next untap step.",
-                rule: "701.20"
+            'mill': {
+                rule: '701.13a',
+                description: 'To mill a number of cards, a player puts that many cards from the top of their library into their graveyard.',
+                example: 'You cast a spell that says "Target player mills 3 cards." They put the top 3 cards of their library into their graveyard.'
             },
-            untap: {
-                description: "Untapping is the process of turning a tapped permanent upright. This normally happens during the untap step of your turn.",
-                example: "During your untap step, all your tapped permanents untap simultaneously. Then you can tap them again for new costs.",
-                rule: "701.21"
+            'scry': {
+                rule: '701.18a',
+                description: 'To scry N, look at the top N cards of your library, then put any number of them on the bottom of your library in any order and the rest on top in any order.',
+                example: 'You scry 2. Look at the top 2 cards. Put one on the bottom, one back on top (or both on bottom, or keep both on top in any order).'
             },
-            combat: {
-                description: "Combat is a phase consisting of: beginning of combat, declare attackers, declare blockers, combat damage, and end of combat steps.",
-                example: "Combat starts. Attackers are declared. Blockers are declared. Damage is dealt simultaneously (unless first strike is involved).",
-                rule: "506.1"
+            ' surveil': {
+                rule: '701.42a',
+                description: 'To surveil N, look at the top N cards of your library, then you may put any number of them into your graveyard and the rest on top of your library in any order.',
+                example: 'You surveil 2. Look at top 2 cards. You can mill 0, 1, or 2 of them, putting the rest back on top in any order you choose.'
             },
-            "end step": {
-                description: "The end step is the first step of the ending phase. 'At the beginning of your end step' triggers happen here.",
-                example: "During your end step, a trigger says 'draw a card'. You draw, then proceed to cleanup step where damage is removed.",
-                rule: "513.1"
+            'explore': {
+                rule: '701.40a',
+                description: 'To explore, reveal the top card of your library. If it\'s a land, put it into your hand. Otherwise, put a +1/+1 counter on the exploring creature, then you may put the revealed card into your graveyard.',
+                example: 'Your creature explores. Reveal top card. If land: take it. If not: +1/+1 counter, then choose to keep or mill the card.'
             },
-            upkeep: {
-                description: "The upkeep step is the second step of your turn. 'At the beginning of your upkeep' triggers happen here, before you draw.",
-                example: "During your upkeep, you pay costs for cumulative upkeep or process triggers like 'at the beginning of your upkeep, draw a card'.",
-                rule: "503.1"
+            'commander': {
+                rule: '903.3',
+                description: 'Each deck has a legendary creature designated as its commander. The commander begins the game in the command zone.',
+                example: 'Your commander is in the command zone. You can cast it from there. Each time it dies or is exiled, you can return it to the command zone.'
             },
-            "draw step": {
-                description: "The draw step is the third step of your turn. You draw a card for your turn, then 'when you draw a card' triggers happen.",
-                example: "You draw your card for the turn. Then a trigger says 'whenever you draw a card, gain 1 life'. You gain 1 life.",
-                rule: "504.1"
-            },
-            "main phase": {
-                description: "Main phases are when you can play lands, cast non-instant spells, and use abilities. You have one before and one after combat.",
-                example: "First main phase: cast a creature. Combat phase. Second main phase: cast a sorcery or play a land (if you haven't played one yet).",
-                rule: "505.1"
-            },
-            protection: {
-                description: "Protection means the permanent cannot be Damaged, Enchanted/Equipped, Blocked, or Targeted by the protected quality (DEBT).",
-                example: "Protection from red: Can't be damaged by red sources, can't be targeted by red spells, can't be blocked by red creatures.",
-                rule: "702.16"
-            },
-            flash: {
-                description: "Flash allows you to cast the spell any time you could cast an instant, even during your opponent's turn or during combat.",
-                example: "A creature with flash can be cast during your opponent's attack step to surprise block, or at the end of their turn.",
-                rule: "702.8"
-            },
-            prowess: {
-                description: "Prowess gives +1/+1 until end of turn whenever you cast a noncreature spell. This triggers for each noncreature spell cast.",
-                example: "You cast an instant. Prowess triggers, creature gets +1/+1. You cast another instant, it gets another +1/+1.",
-                rule: "702.107"
+            'commander tax': {
+                rule: '903.8',
+                description: 'A player may cast their commander from the command zone. Each time they do, it costs {2} more for each previous time they\'ve cast it from the command zone that game.',
+                example: 'Your commander costs {1}{G}{W} normally. First cast from command zone: {1}{G}{W}. Second cast: {3}{G}{W}. Third cast: {5}{G}{W}, and so on.'
             }
         };
 
-        // ==========================================
+        // ═══════════════════════════════════════
         // SEMANTIC QUESTION PATTERNS
-        // ==========================================
+        // ═══════════════════════════════════════
         const questionPatterns = {
             bypass: {
-                patterns: ['bypass', 'get around', 'avoid', 'ignore', 'work against', 'stop'],
-                handler: analyzeBypassQuestion
+                patterns: [
+                    /if i (sacrifice|sac|kill|destroy) .+ does .+ (get|have|gain) .+ (damage|power|toughness|\+|counter)/i,
+                    /if .+ dies? does .+ (get|have|gain|trigger)/i,
+                    /when .+ dies? does .+ (get|have|gain|trigger)/i,
+                    /does .+ (trigger|work|happen) if .+ (die|dies|sacrificed|destroyed)/i
+                ],
+                response: (matches) => {
+                    return {
+                        type: 'bypass_answer',
+                        answer: 'YES - This will work as you expect. When a creature dies or is sacrificed, any triggered abilities that look for that condition will trigger normally. The game checks the last known information of the creature to determine if it had the relevant ability.',
+                        explanation: 'Death triggers and sacrifice synergies work because the game uses "last known information" - it looks at what the creature had when it was last on the battlefield.',
+                        rule: '603.10',
+                        related: ['sacrifice', 'dies', 'trigger']
+                    };
+                }
             },
-            interact: {
-                patterns: ['work with', 'stack with', 'combo with', 'trigger', 'doubling season'],
-                handler: analyzeInteractionQuestion
+            prevention: {
+                patterns: [
+                    /can i (prevent|stop|avoid) .+ (damage|combat|attacking)/i,
+                    /how (do|can) i (prevent|stop) .+ (damage|combat)/i,
+                    /what (prevents|stops) .+ (damage|combat|attacking)/i,
+                    /does .+ (prevent|stop) .+ (damage|combat)/i
+                ],
+                response: (matches) => {
+                    return {
+                        type: 'prevention_answer',
+                        answer: 'Prevention effects apply before damage is dealt. You can prevent damage using protection, prevention spells like Fog, or by removing the source. Note that "prevent all damage" effects won\'t stop abilities that don\'t deal damage (like "destroy target creature").',
+                        explanation: 'Damage prevention creates a replacement effect that modifies how damage is dealt. It can reduce damage to 0, but won\'t stop non-damage effects.',
+                        rule: '615.1',
+                        related: ['protection', 'fog', 'prevention']
+                    };
+                }
             },
-            prevent: {
-                patterns: ['stop', 'prevent', 'block', 'counter'],
-                handler: analyzePreventionQuestion
+            interaction: {
+                patterns: [
+                    /how does .+ (interact|work|combine) with .+/i,
+                    /what happens when .+ (meets|fights|blocks|attacks into) .+/i,
+                    /do .+ and .+ (work|combine|interact) (together)?/i,
+                    /can .+ (block|target|affect) .+/i
+                ],
+                response: (matches) => {
+                    return {
+                        type: 'interaction_answer',
+                        answer: 'To give you a precise answer, I need to know the specific cards involved. Each interaction depends on timestamps, layers, and specific wording. Common interactions: Protection prevents damage/enchanting/targeting. Deathtouch makes any damage lethal. First strike changes combat order.',
+                        explanation: 'Magic interactions depend on the specific cards, their abilities, and the game state. Layer system determines how continuous effects apply.',
+                        rule: '613.1',
+                        related: ['layers', 'interaction', 'protection']
+                    };
+                }
             },
-            compare: {
-                patterns: ['better than', 'instead of', 'or', 'vs', 'versus', 'difference'],
-                handler: analyzeComparisonQuestion
+            comparison: {
+                patterns: [
+                    /what('s| is) the difference between .+ and .+/i,
+                    /how (is|does) .+ different from .+/i,
+                    /compare .+ to .+/i,
+                    /.+ vs\.? .+/i
+                ],
+                response: (matches) => {
+                    return {
+                        type: 'comparison_answer',
+                        answer: 'The key differences depend on what you\'re comparing. Generally: Hexproof vs Shroud - hexproof only stops opponents, shroud stops everyone. Protection vs Indestructible - protection prevents damage/enchanting/targeting, indestructible ignores destroy effects. Trample vs Menace - trample pushes excess damage through, menace requires multiple blockers.',
+                        explanation: 'Comparing mechanics requires looking at what each ability prevents or allows, and who controls the effect.',
+                        rule: 'Various',
+                        related: ['comparison', 'hexproof', 'shroud', 'protection']
+                    };
+                }
             }
         };
 
-        function analyzeBypassQuestion(text, keywords) {
-            const lower = text.toLowerCase();
-
-            // Sacrifice vs hexproof/shroud
-            if (lower.includes('sacrifice') && (keywords.includes('hexproof') || keywords.includes('shroud'))) {
-                return {
-                    type: 'bypass_answer',
-                    answer: 'YES - Sacrifice bypasses hexproof and shroud',
-                    explanation: 'When you sacrifice a creature, you (the controller) are making the choice, not targeting the creature. Hexproof and shroud only prevent targeting. Since sacrifice effects usually target the PLAYER (who must sacrifice), not the creature itself, they work against hexproof creatures.',
-                    example: 'If your opponent casts "Each opponent sacrifices a creature," you must sacrifice even if your only creature has hexproof, because the spell targets YOU, not your creature.',
-                    keywords: ['sacrifice', 'hexproof', 'targeting']
-                };
-            }
-
-            // Exile vs indestructible
-            if (lower.includes('exile') && keywords.includes('indestructible')) {
-                return {
-                    type: 'bypass_answer',
-                    answer: 'YES - Exile bypasses indestructible',
-                    explanation: 'Indestructible only prevents "destroy" effects and lethal damage. Exile does not destroy anything - it removes the permanent from the game entirely. Exile, sacrifice, and reducing toughness to 0 all bypass indestructible.',
-                    example: 'Path to Exile can remove an indestructible creature because it exiles rather than destroys.',
-                    keywords: ['exile', 'indestructible', 'destroy']
-                };
-            }
-
-            // Board wipe vs hexproof/protection
-            if ((lower.includes('board wipe') || lower.includes('wrath') || lower.includes('destroy all') || lower.includes('exile all')) && 
-                (keywords.includes('hexproof') || keywords.includes('protection') || keywords.includes('shroud'))) {
-                return {
-                    type: 'bypass_answer',
-                    answer: 'YES - Board wipes bypass hexproof, shroud, and protection',
-                    explanation: 'Hexproof, shroud, and protection only prevent TARGETING. Board wipes like "Destroy all creatures" or "Exile all creatures" do not target anything - they affect all creatures equally. Since there is no targeting, protection does not help.',
-                    example: 'Wrath of God destroys creatures with hexproof or protection from white because it does not target. Only indestructible creatures survive.',
-                    keywords: ['board wipe', 'hexproof', 'protection', 'targeting']
-                };
-            }
-
-            return null;
-        }
-
-        function analyzeInteractionQuestion(text, keywords) {
-            const lower = text.toLowerCase();
-
-            // Doubling Season + Planeswalkers
-            if (lower.includes('doubling season') && lower.includes('planeswalker')) {
-                return {
-                    type: 'interaction_answer',
-                    answer: 'YES - Doubling Season doubles planeswalker loyalty counters',
-                    explanation: 'Doubling Season says "If an effect would put one or more counters on a permanent you control, it puts twice that many instead." When a planeswalker enters the battlefield, it enters with loyalty counters, which is an effect that puts counters on a permanent. Therefore, Doubling Season doubles the starting loyalty.',
-                    example: 'A planeswalker that normally enters with 3 loyalty enters with 6 loyalty if you control Doubling Season. When you activate a plus ability, it adds twice as many counters.',
-                    keywords: ['doubling season', 'planeswalker', 'counters']
-                };
-            }
-
-            // Lifelink + damage doublers
-            if (keywords.includes('lifelink') && (lower.includes('double') || lower.includes('double damage'))) {
-                return {
-                    type: 'interaction_answer',
-                    answer: 'YES - Lifelink works with damage doublers',
-                    explanation: 'Lifelink cares about the amount of damage actually dealt. If a damage doubler like "Furnace of Rath" doubles the damage, you gain life equal to the doubled amount.',
-                    example: 'Your 5/5 lifelink creature attacks. Furnace of Rath doubles the damage to 10. You gain 10 life.',
-                    keywords: ['lifelink', 'damage', 'double']
-                };
-            }
-
-            // Trample + Deathtouch
-            if (keywords.includes('trample') && keywords.includes('deathtouch')) {
-                return {
-                    type: 'interaction_answer',
-                    answer: 'YES - Trample and Deathtouch work powerfully together',
-                    explanation: 'When a creature has both trample and deathtouch, it only needs to assign 1 damage to each blocker (due to deathtouch being lethal), then can trample over the rest to the player.',
-                    example: 'A 5/5 with trample and deathtouch blocked by three 3/3 creatures assigns 1 damage to each blocker (killing all three) and 2 damage tramples through to the player.',
-                    keywords: ['trample', 'deathtouch', 'combat']
-                };
-            }
-
-            return null;
-        }
-
-        function analyzePreventionQuestion(text, keywords) {
-            const lower = text.toLowerCase();
-
-            if (lower.includes('stop') || lower.includes('prevent')) {
-
-                // Stopping commander damage
-                if (lower.includes('commander damage')) {
-                    return {
-                        type: 'prevention_answer',
-                        answer: 'Commander damage can be prevented with damage prevention or Fog effects',
-                        explanation: 'Commander damage is still combat damage, so any effect that prevents damage (like Fog, Safe Passage, or protection) will prevent commander damage. However, preventing the damage does not prevent the commander from dealing damage for the purposes of the 21-damage rule - only prevention effects work.',
-                        example: 'Fog prevents all combat damage, including commander damage. But if you take 15 commander damage, then your opponent attacks with their commander and you Fog, you still have 15 commander damage tracked.',
-                        keywords: ['commander damage', 'prevention', 'fog']
-                    };
-                }
-
-                // Stopping triggered abilities
-                if (keywords.includes('trigger') || lower.includes('triggered ability')) {
-                    return {
-                        type: 'prevention_answer',
-                        answer: 'Triggered abilities can be countered with specific counterspells',
-                        explanation: 'Triggered abilities go on the stack and can be countered with spells like "Stifle" or "Tale's End" that specifically counter abilities. Regular counterspells that say "counter target spell" cannot counter triggered abilities because abilities are not spells.',
-                        example: 'Your opponent's "When this creature enters the battlefield" trigger can be countered with Stifle, but not with Cancel.',
-                        keywords: ['triggered ability', 'counter', 'stack']
-                    };
-                }
-            }
-
-            return null;
-        }
-
-        function analyzeComparisonQuestion(text, keywords) {
-            const lower = text.toLowerCase();
-
-            // Hexproof vs Shroud
-            if (keywords.includes('hexproof') && keywords.includes('shroud')) {
-                return {
-                    type: 'comparison_answer',
-                    answer: 'Hexproof is strictly better than shroud',
-                    explanation: 'Both prevent opponents from targeting, but shroud also prevents YOU from targeting your own permanent. Hexproof only prevents opponent targeting, so you can still cast helpful spells on your own hexproof creatures.',
-                    example: 'You can cast Giant Growth on your hexproof creature. You cannot cast Giant Growth on your shroud creature.',
-                    keywords: ['hexproof', 'shroud', 'targeting']
-                };
-            }
-
-            return null;
-        }
-
-        // ==========================================
+        // ═══════════════════════════════════════
         // STATE MANAGEMENT
-        // ==========================================
+        // ═══════════════════════════════════════
         const States = {
             LISTENING: 'listening',
-            THINKING: 'thinking',
-            SPEAKING: 'speaking',
+            PROCESSING: 'processing',
             WAITING: 'waiting',
             PAUSED: 'paused'
         };
 
         let currentState = States.LISTENING;
+        let isProcessing = false;
         let isPaused = false;
-
-        function setState(state) {
-            currentState = state;
-            const pulse = document.getElementById('pulse');
-            const mainText = document.getElementById('main-text');
-            const subText = document.getElementById('sub-text');
-
-            pulse.classList.remove('thinking', 'speaking', 'paused', 'waiting');
-
-            switch(state) {
-                case States.LISTENING:
-                    mainText.textContent = 'Listening';
-                    subText.textContent = 'The Arbiter hears all disputes';
-                    break;
-
-                case States.THINKING:
-                    pulse.classList.add('thinking');
-                    mainText.textContent = 'Consulting';
-                    subText.textContent = 'Searching the comprehensive rules...';
-                    break;
-
-                case States.SPEAKING:
-                    pulse.classList.add('speaking');
-                    mainText.textContent = 'The Arbiter Speaks';
-                    break;
-
-                case States.WAITING:
-                    pulse.classList.add('waiting');
-                    mainText.textContent = 'Awaiting Response';
-                    subText.textContent = 'Speak the card name clearly';
-                    break;
-
-                case States.PAUSED:
-                    pulse.classList.add('paused');
-                    mainText.textContent = 'Paused';
-                    subText.textContent = 'Listening suspended';
-                    break;
-            }
-        }
-
+        let expectingCardName = false;
+        let lastRuling = null;
         let recognition = null;
+        let disputeCount = 0;
+        let sessionStartTime = Date.now();
 
-        function togglePause() {
-            isPaused = !isPaused;
-
-            if (isPaused) {
-                if (recognition) recognition.stop();
-                setState(States.PAUSED);
-                document.getElementById('pause-icon').textContent = '▶️';
-                document.getElementById('pause-text').textContent = 'Resume';
-                addLog('Listening paused', 'arbiter');
-            } else {
-                if (recognition) recognition.start();
-                setState(States.LISTENING);
-                document.getElementById('pause-icon').textContent = '⏸️';
-                document.getElementById('pause-text').textContent = 'Pause';
-                addLog('Listening resumed', 'arbiter');
-            }
-        }
-
-        // ==========================================
-        // IMPROVED DISPUTE DETECTOR
-        // ==========================================
+        // ═══════════════════════════════════════
+        // DISPUTE DETECTOR
+        // ═══════════════════════════════════════
         class ImprovedDisputeDetector {
             constructor() {
-                this.triggers = {
-                    challenge: {
-                        words: ["you can't", "you cannot", "illegal", "wrong", "not legal", "invalid", "that doesn't work", "doesn't work", "cant", "cannot"],
-                        weight: 4
-                    },
-                    uncertainty: {
-                        words: ["wait", "hold on", "not sure", "confused", "how does", "does that", "can you", "is that", "what if", "unsure"],
-                        weight: 2
-                    },
-                    questions: {
-                        words: ["what does", "what happens", "can i", "do i", "why", "when", "how", "what is", "what's"],
-                        weight: 2
-                    },
-                    mtg_keywords: {
-                        words: Object.keys(keywords),
-                        weight: 3
-                    }
+                this.disputePatterns = [
+                    /\b(no|wait|hold on|stop|that's not right|incorrect|wrong|actually|but|hang on)\b/i,
+                    /\b(i think|don't you mean|are you sure|check again|verify)\b/i,
+                    /\b(dispute|challenge|objection|appeal)\b/i,
+                    /(\?.*\?)/,
+                    /\b(but|however|although)\s+(that|this|it)\s+(isn't|is not|doesn't|does not)\b/i
+                ];
+                this.confidenceLevels = {
+                    HIGH: 'high',
+                    MEDIUM: 'medium',
+                    LOW: 'low'
                 };
-
-                this.threshold = 2;  // ← LOWERED from 4
-                this.cooldown = 5000;
-                this.lastTrigger = 0;
             }
 
             analyze(text) {
-                const lower = text.toLowerCase();
-                let score = 0;
-                let matchedTriggers = [];
+                const matches = this.disputePatterns.filter(pattern => pattern.test(text));
+                const confidence = this.calculateConfidence(matches, text);
+                
+                return {
+                    detected: matches.length > 0,
+                    confidence: confidence,
+                    matches: matches.length,
+                    timestamp: new Date().toISOString()
+                };
+            }
 
-                for (const [category, config] of Object.entries(this.triggers)) {
-                    for (const word of config.words) {
-                        if (lower.includes(word.toLowerCase())) {
-                            score += config.weight;
-                            matchedTriggers.push({ category, word, weight: config.weight });
-                        }
-                    }
-                }
-
-                const now = Date.now();
-                if (score >= this.threshold && (now - this.lastTrigger) > this.cooldown) {
-                    this.lastTrigger = now;
-                    return {
-                        detected: true,
-                        score,
-                        confidence: score >= 7 ? 'high' : score >= 5 ? 'medium' : 'low',
-                        triggers: matchedTriggers
-                    };
-                }
-
-                return { detected: false, score };
+            calculateConfidence(matches, text) {
+                if (matches.length >= 3) return this.confidenceLevels.HIGH;
+                if (matches.length === 2) return this.confidenceLevels.MEDIUM;
+                if (matches.length === 1 && text.length > 50) return this.confidenceLevels.MEDIUM;
+                return this.confidenceLevels.LOW;
             }
         }
 
         const detector = new ImprovedDisputeDetector();
 
-        // ==========================================
-        // CONVERSATION CONTEXT MEMORY
-        // ==========================================
+        // ═══════════════════════════════════════
+        // CONVERSATION CONTEXT
+        // ═══════════════════════════════════════
         const conversationContext = {
-            recentKeywords: [],
-            recentCards: [],
-            recentQuestions: [],
-
-            add(type, value) {
-                if (type === 'keyword') {
-                    this.recentKeywords.unshift(value);
-                    this.recentKeywords = this.recentKeywords.slice(0, 5);
-                } else if (type === 'card') {
-                    this.recentCards.unshift(value);
-                    this.recentCards = this.recentCards.slice(0, 3);
-                } else if (type === 'question') {
-                    this.recentQuestions.unshift(value);
-                    this.recentQuestions = this.recentQuestions.slice(0, 3);
+            history: [],
+            maxSize: 10,
+            
+            add(type, content) {
+                this.history.push({
+                    type,
+                    content,
+                    timestamp: Date.now()
+                });
+                if (this.history.length > this.maxSize) {
+                    this.history.shift();
                 }
-                this.updateInsights();
             },
-
-            isRelated(text) {
-                const lower = text.toLowerCase();
-
-                if (lower.includes('that') || lower.includes('it') || lower.includes('same') || 
-                    lower.includes('what about') || lower.includes('how about')) {
-                    return true;
+            
+            getLast(type) {
+                for (let i = this.history.length - 1; i >= 0; i--) {
+                    if (this.history[i].type === type) {
+                        return this.history[i];
+                    }
                 }
-
-                for (const keyword of this.recentKeywords) {
-                    if (lower.includes(keyword)) return true;
-                }
-
-                return false;
+                return null;
             },
-
-            getMostRecentKeyword() {
-                return this.recentKeywords[0] || null;
-            },
-
-            updateInsights() {
-                const debugEl = document.getElementById('debug');
-                const mostRecent = this.getMostRecentKeyword();
-                let text = `Session: ${Math.floor((new Date() - new Date(window.sessionData.startTime)) / 1000 / 60)}m | Disputes: ${window.sessionData.disputes.length}`;
-
-                if (mostRecent) {
-                    text += ` | Recent: ${mostRecent}`;
-                }
-                if (this.recentCards.length > 0) {
-                    text += ` | Cards: ${this.recentCards.slice(0, 2).join(', ')}`;
-                }
-
-                debugEl.textContent = text;
+            
+            clear() {
+                this.history = [];
             }
         };
 
-        // ==========================================
-        // CARD NAME LOADING AND EXTRACTION
-        // ==========================================
+        // ═══════════════════════════════════════
+        // CARD NAME CACHE
+        // ═══════════════════════════════════════
         let cachedCardNames = null;
-        let errorCount = 0;
-        const MAX_ERRORS = 3;
 
         async function loadCardNames() {
             if (cachedCardNames) return cachedCardNames;
-
+            
             try {
-                // Fetch popular commander cards
-                const response = await fetch('https://api.scryfall.com/cards/search?q=is:commander+or+is:staple&order=edhrec&unique=cards');
+                const response = await fetch('https://api.scryfall.com/catalog/card-names');
                 const data = await response.json();
-                cachedCardNames = data.data.map(card => ({
-                    name: card.name.toLowerCase(),
-                    fullName: card.name
-                }));
-                addLog(`Loaded ${cachedCardNames.length} card names`, 'system');
+                cachedCardNames = new Set(data.data.map(name => name.toLowerCase()));
+                console.log('📚 Loaded', cachedCardNames.size, 'card names');
                 return cachedCardNames;
             } catch (e) {
-                console.error('Failed to load card names:', e);
-                return [];
+                console.log('⚠️ Could not load card names:', e);
+                cachedCardNames = new Set();
+                return cachedCardNames;
             }
         }
 
-        function extractCardNames(text) {
-            const lower = text.toLowerCase();
-            const foundCards = [];
-
-            if (!cachedCardNames) return foundCards;
-
-            // Try to match card names (2-5 word combinations)
-            const words = lower.split(/\s+/);
-
-            for (let length = 6; length >= 1; length--) {
-                for (let i = 0; i <= words.length - length; i++) {
-                    const phrase = words.slice(i, i + length).join(' ');
-                    const match = cachedCardNames.find(c => c.name === phrase);
-                    if (match && !foundCards.includes(match.fullName)) {
-                        foundCards.push(match.fullName);
-                    }
-                }
-            }
-
-            return foundCards;
-        }
-
-        async function getSuggestions(cardName) {
-            try {
-                const response = await fetch(`https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(cardName)}`);
-                const data = await response.json();
-                return data.data || [];
-            } catch (e) {
-                return [];
-            }
-        }
-
-        // ==========================================
+        // ═══════════════════════════════════════
         // SESSION DATA
-        // ==========================================
+        // ═══════════════════════════════════════
         window.sessionData = {
-        
             startTime: new Date().toISOString(),
-            disputes: [],
-            endTime: null
+            endTime: null,
+            gameLength: 0,
+            disputesDetected: 0,
+            rulingsGiven: 0,
+            cardsReferenced: [],
+            keywordsReferenced: []
         };
 
-        let disputeCount = 0;
-
-        let isProcessing = false;
-        let expectingCardName = false;
-        let lastRulingData = null;
-
-
-        // ==========================================
+        // ═══════════════════════════════════════
         // LOGGING
-        // ==========================================
+        // ═══════════════════════════════════════
         function addLog(message, type = 'system') {
             const container = document.getElementById('log-container');
             const entry = document.createElement('div');
@@ -1159,676 +857,403 @@
             entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
             container.appendChild(entry);
             container.scrollTop = container.scrollHeight;
-
-            // Keep only last 50 entries
-            while (container.children.length > 50) {
-                container.removeChild(container.firstChild);
-            }
         }
 
-        function updateTimer() {
-            const start = new Date(window.sessionData.startTime);
-            const now = new Date();
-            const minutes = Math.floor((now - start) / 1000 / 60);
-            document.getElementById('timer').textContent = `Session: ${minutes}m`;
-            document.getElementById('dispute-counter').textContent = `Disputes: ${disputeCount}`;
-            conversationContext.updateInsights();
-        }
-
-        setInterval(updateTimer, 1000);
-
-        // ==========================================
+        // ═══════════════════════════════════════
         // SPEECH SYNTHESIS
-        // ==========================================
-        function speak(text, onDone) {
-            if (!('speechSynthesis' in window)) {
-                if (onDone) setTimeout(onDone, 1000);
-                return;
+        // ═══════════════════════════════════════
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1;
+                utterance.pitch = 1;
+                window.speechSynthesis.speak(utterance);
             }
-
-            window.speechSynthesis.cancel();
-            setState(States.SPEAKING);
-
-            const subText = document.getElementById('sub-text');
-            subText.textContent = text.substring(0, 80) + (text.length > 80 ? '...' : '');
-
-            addLog('Arbiter: ' + text, 'arbiter');
-
-            const u = new SpeechSynthesisUtterance(text);
-            u.rate = 0.9;
-            u.pitch = 0.9;
-
-            const voices = speechSynthesis.getVoices();
-            const v = voices.find(x => x.name.includes('Google US')) || 
-                     voices.find(x => x.name.includes('Samantha')) ||
-                     voices.find(x => x.lang === 'en-US');
-            if (v) u.voice = v;
-
-            u.onend = () => {
-                if (!isPaused) {
-                    setState(States.LISTENING);
-                }
-                if (onDone) onDone();
-            };
-
-            u.onerror = () => {
-                if (!isPaused) {
-                    setState(States.LISTENING);
-                }
-                if (onDone) onDone();
-            };
-
-            speechSynthesis.speak(u);
         }
 
-        // ==========================================
+        // ═══════════════════════════════════════
         // QUESTION ANALYSIS
-        // ==========================================
+        // ═══════════════════════════════════════
         function analyzeQuestion(text) {
-            const lower = text.toLowerCase();
-
-            // Extract keywords present in question
-            const keywordsInQuestion = [];
-            for (const [keyword, data] of Object.entries(keywords)) {
-                if (lower.includes(keyword.toLowerCase())) {
-                    keywordsInQuestion.push({ keyword, data });
-                }
-            }
-
-            // Extract cards mentioned
-            const cardsInQuestion = extractCardNames(text);
-
-            // Check for semantic question patterns FIRST
-            const keywordList = keywordsInQuestion.map(k => k.keyword);
-            for (const [patternType, config] of Object.entries(questionPatterns)) {
-                for (const pattern of config.patterns) {
-                    if (lower.includes(pattern)) {
-                        const result = config.handler(text, keywordList);
-                        if (result) {
-                            return result;
-                        }
+            const lowerText = text.toLowerCase();
+            
+            // Check for semantic patterns first
+            for (const [type, data] of Object.entries(questionPatterns)) {
+                for (const pattern of data.patterns) {
+                    if (pattern.test(text)) {
+                        console.log('✅ Semantic pattern matched:', type);
+                        return data.response(text.match(pattern));
                     }
                 }
             }
 
-            // Check for follow-up questions using context
-            if (conversationContext.isRelated(text)) {
-                const followUpMatch = lower.match(/what about\s+(\w+)|how about\s+(\w+)/);
-                if (followUpMatch) {
-                    const newKeyword = followUpMatch[1] || followUpMatch[2];
-                    if (keywords[newKeyword]) {
+            // Check for multiple keywords
+            const foundKeywords = [];
+            for (const [keyword, data] of Object.entries(keywords)) {
+                if (lowerText.includes(keyword)) {
+                    foundKeywords.push({ keyword, data });
+                }
+            }
+
+            if (foundKeywords.length > 1) {
+                return {
+                    type: 'multiple_keywords',
+                    keywords: foundKeywords
+                };
+            }
+
+            if (foundKeywords.length === 1) {
+                return {
+                    type: 'keyword',
+                    keywords: foundKeywords
+                };
+            }
+
+            // Check for card names
+            const cardPatterns = [
+                /what does (.+?) do/i,
+                /how does (.+?) work/i,
+                /tell me about (.+?)(?:\?|$)/i,
+                /(.+?) vs (.+)/i,
+                /(.+?) and (.+)/i
+            ];
+
+            for (const pattern of cardPatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    const cards = match.slice(1).map(c => c.trim()).filter(c => c.length > 2);
+                    if (cards.length > 1) {
                         return {
-                            type: 'keyword',
-                            keywords: [{ keyword: newKeyword, data: keywords[newKeyword] }],
-                            cards: cardsInQuestion,
-                            hasCards: cardsInQuestion.length > 0,
-                            isFollowUp: true
+                            type: 'combo',
+                            cards: cards
+                        };
+                    } else if (cards.length === 1) {
+                        return {
+                            type: 'card',
+                            cards: cards,
+                            needsCardName: false
                         };
                     }
                 }
             }
 
-            // Determine type based on what we found
-            if (keywordsInQuestion.length > 1) {
-                return {
-                    type: 'multiple_keywords',
-                    keywords: keywordsInQuestion,
-                    cards: cardsInQuestion,
-                    hasCards: cardsInQuestion.length > 0
-                };
-            }
-
-            if (keywordsInQuestion.length === 1) {
-                return {
-                    type: 'keyword',
-                    keywords: keywordsInQuestion,
-                    cards: cardsInQuestion,
-                    hasCards: cardsInQuestion.length > 0
-                };
-            }
-
-            if (cardsInQuestion.length > 1) {
-                return {
-                    type: 'combo',
-                    cards: cardsInQuestion,
-                    needsCardName: false
-                };
-            }
-
-            if (cardsInQuestion.length === 1) {
+            // Generic card reference
+            if (lowerText.includes('card') || lowerText.includes('creature') || lowerText.includes('spell')) {
                 return {
                     type: 'card',
-                    cards: cardsInQuestion,
-                    needsCardName: false
+                    cards: [],
+                    needsCardName: true
                 };
             }
 
-            // Check for dispute triggers
-            const disputeCheck = detector.analyze(text);
-            if (disputeCheck.detected) {
-                return { 
-                    type: 'card', 
-                    needsCardName: true,
-                    confidence: disputeCheck.confidence,
-                    score: disputeCheck.score
-                };
-            }
-
-            return { type: 'none' };
+            return {
+                type: 'unknown',
+                text: text
+            };
         }
 
-        // ==========================================
+        // ═══════════════════════════════════════
         // RULING DISPLAY FUNCTIONS
-        // ==========================================
+        // ═══════════════════════════════════════
         function showSemanticAnswer(analysis) {
-            isProcessing = true;
-            setState(States.THINKING);
-
-            lastRulingData = { type: 'semantic', analysis };
-
-            const content = document.getElementById('ruling-content');
-            content.innerHTML = `
+            const overlay = document.getElementById('ruling-overlay');
+            const body = document.getElementById('ruling-body');
+            
+            body.innerHTML = `
                 <div class="keyword-ruling">
-                    <div class="keyword-title">${analysis.answer}</div>
-                    <div class="keyword-rule">Interaction Ruling</div>
-
-                    <div class="keyword-description">
-                        <p>${analysis.explanation}</p>
+                    <h2>💡 Answer</h2>
+                    <div class="keyword-description" style="font-size: 20px; color: #4ecdc4; margin-bottom: 20px;">
+                        ${analysis.answer}
                     </div>
-
                     <div class="keyword-example">
-                        <h4>Example</h4>
-                        <p>${analysis.example}</p>
-                    </div>
-
-                    <div style="margin-top: 20px; padding: 15px; background: rgba(201, 168, 106, 0.1); 
-                                border-radius: 8px; text-align: left;">
-                        <h4 style="color: #c9a86a; font-size: 12px; text-transform: uppercase; 
-                                   letter-spacing: 2px; margin-bottom: 10px;">Related Keywords</h4>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            ${analysis.keywords.map(k => 
-                                `<span style="padding: 6px 12px; background: rgba(0,167,181,0.2); 
-                                        color: #00a7b5; border-radius: 16px; font-size: 14px; 
-                                        cursor: pointer; border: 1px solid rgba(0,167,181,0.3);"
-                                        onclick="if(keywords['${k}']) showKeywordRuling('${k}', keywords['${k}']); closeRuling();">
-                                    ${k}
-                                </span>`
-                            ).join('')}
-                        </div>
+                        <h4>📖 Explanation</h4>
+                        <p>${analysis.explanation}</p>
+                        <p style="margin-top: 10px; color: #00a7b5;">Rule ${analysis.rule}</p>
                     </div>
                 </div>
             `;
-
-            document.getElementById('ruling-overlay').classList.add('active');
-
-            const speech = `${analysis.answer}. ${analysis.explanation}`;
-            speak(speech, () => {
-                speak(analysis.example, () => {
-                    isProcessing = false;
-                    conversationContext.add('keyword', analysis.keywords[0]);
-                });
-            });
-
-            window.sessionData.disputes.push({
-                timestamp: new Date().toISOString(),
-                type: 'semantic',
-                answer: analysis.answer,
-                keywords: analysis.keywords
-            });
-            disputeCount++;
-            updateTimer();
+            
+            overlay.classList.add('show');
+            speak(analysis.answer);
+            lastRuling = analysis;
+            window.sessionData.rulingsGiven++;
         }
 
         function showKeywordRuling(keyword, data) {
-            isProcessing = true;
-            setState(States.THINKING);
-
-            lastRulingData = { type: 'keyword', keyword, data };
-            conversationContext.add('keyword', keyword);
-
-            const content = document.getElementById('ruling-content');
-            content.innerHTML = `
+            const overlay = document.getElementById('ruling-overlay');
+            const body = document.getElementById('ruling-body');
+            
+            body.innerHTML = `
                 <div class="keyword-ruling">
-                    <div class="keyword-title">${keyword}</div>
+                    <h2>${keyword.toUpperCase()}</h2>
                     <div class="keyword-rule">Rule ${data.rule}</div>
-
-                    <div class="keyword-description">
-                        <p>${data.description}</p>
-                    </div>
-
+                    <div class="keyword-description">${data.description}</div>
                     <div class="keyword-example">
-                        <h4>Example Scenario</h4>
+                        <h4>📖 Example</h4>
                         <p>${data.example}</p>
                     </div>
                 </div>
             `;
-
-            document.getElementById('ruling-overlay').classList.add('active');
-
-            const speech = `${keyword}. ${data.description} For example, ${data.example}`;
-            speak(speech, () => {
-                isProcessing = false;
-            });
-
-            window.sessionData.disputes.push({
-                timestamp: new Date().toISOString(),
-                type: 'keyword',
-                keyword: keyword
-            });
-            disputeCount++;
-            updateTimer();
+            
+            overlay.classList.add('show');
+            speak(`${keyword}. Rule ${data.rule}. ${data.description}`);
+            lastRuling = { keyword, data };
+            window.sessionData.rulingsGiven++;
+            window.sessionData.keywordsReferenced.push(keyword);
+            
+            addLog(`Ruling: ${keyword}`, 'ruling');
         }
 
         function showMultipleKeywords(keywordsList) {
-            isProcessing = true;
-            setState(States.THINKING);
-
-            lastRulingData = { type: 'multiple_keywords', keywords: keywordsList };
-
-            const content = document.getElementById('ruling-content');
-
-            let html = '<div class="keyword-ruling">';
-            html += `<div class="keyword-title">Multiple Keywords</div>`;
-            html += `<div class="keyword-rule">Keyword Interaction</div>`;
-
-            for (const { keyword, data } of keywordsList) {
-                conversationContext.add('keyword', keyword);
+            const overlay = document.getElementById('ruling-overlay');
+            const body = document.getElementById('ruling-body');
+            
+            let html = '<div class="keyword-ruling"><h2>Multiple Keywords Detected</h2>';
+            keywordsList.forEach(({keyword, data}) => {
                 html += `
-                    <div class="keyword-description" style="margin-bottom: 15px;">
-                        <h3 style="color: #00a7b5; margin-bottom: 10px; text-transform: uppercase; font-size: 18px;">${keyword}</h3>
-                        <p>${data.description}</p>
+                    <div style="margin-bottom: 30px; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 10px;">
+                        <h3 style="color: #00a7b5; margin-bottom: 10px;">${keyword.toUpperCase()}</h3>
+                        <div class="keyword-rule" style="margin-bottom: 10px;">Rule ${data.rule}</div>
+                        <div class="keyword-description">${data.description}</div>
                     </div>
                 `;
-            }
-
-            // Add interaction explanation for common combos
-            const comboKey = keywordsList.map(k => k.keyword).sort().join('+');
-            const comboExplanations = {
-                'trample+deathtouch': 'When a creature has both trample and deathtouch, it only needs to assign 1 damage to each blocker (due to deathtouch being lethal), then can trample over the rest to the player.',
-                'lifelink+deathtouch': 'Gain life from all damage dealt, and any amount is lethal.',
-                'first strike+deathtouch': 'Kill blockers before they deal damage back.',
-                'double strike+lifelink': 'Gain life twice - once in first strike, once in regular damage.',
-                'hexproof+shroud': 'Hexproof is strictly better - both prevent opponent targeting, but hexproof allows you to target your own permanent.'
-            };
-
-            if (comboExplanations[comboKey]) {
-                html += `
-                    <div class="keyword-example">
-                        <h4>How They Interact</h4>
-                        <p>${comboExplanations[comboKey]}</p>
-                    </div>
-                `;
-            }
-
+            });
             html += '</div>';
-            content.innerHTML = html;
-
-            document.getElementById('ruling-overlay').classList.add('active');
-
-            const speech = keywordsList.map(k => `${k.keyword}: ${k.data.description}`).join('. Then, ');
-            speak(speech, () => {
-                isProcessing = false;
-            });
-
-            window.sessionData.disputes.push({
-                timestamp: new Date().toISOString(),
-                type: 'multiple_keywords',
-                keywords: keywordsList.map(k => k.keyword)
-            });
-            disputeCount++;
-            updateTimer();
-        }
-
-        async function findCard(cardName) {
-            try {
-                const response = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cardName)}`);
-                if (!response.ok) throw new Error('Card not found');
-                return await response.json();
-            } catch (e) {
-                return null;
-            }
+            
+            body.innerHTML = html;
+            overlay.classList.add('show');
+            speak(`I found ${keywordsList.length} keywords. Showing ${keywordsList[0].keyword} first.`);
+            lastRuling = { type: 'multiple', keywords: keywordsList };
+            window.sessionData.rulingsGiven++;
         }
 
         async function showCardRuling(cardName) {
-            isProcessing = true;
-            setState(States.THINKING);
-
-            lastRulingData = { type: 'card', cardName };
-            conversationContext.add('card', cardName);
-
+            const overlay = document.getElementById('ruling-overlay');
+            const body = document.getElementById('ruling-body');
+            
+            body.innerHTML = '<div style="text-align: center; padding: 40px;">🔍 Searching for card...</div>';
+            overlay.classList.add('show');
+            
             try {
-                const card = await findCard(cardName);
-
-                if (!card) {
-                    throw new Error('Card not found');
-                }
-
-                errorCount = 0;
-
-                const content = document.getElementById('ruling-content');
-                content.innerHTML = `
+                const response = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cardName)}`);
+                if (!response.ok) throw new Error('Card not found');
+                
+                const card = await response.json();
+                
+                body.innerHTML = `
                     <div class="card-ruling">
                         <div class="card-image-container">
-                            ${card.image_uris ? 
-                                `<img src="${card.image_uris.normal}" alt="${card.name}">` :
-                                `<div class="card-placeholder">No image available</div>`
-                            }
+                            <img src="${card.image_uris?.normal || card.image_uris?.small}" alt="${card.name}" class="card-image">
                         </div>
                         <div class="card-details">
-                            <div class="card-name">${card.name}</div>
+                            <h2>${card.name}</h2>
                             <div class="card-type">${card.type_line}</div>
-                            <div class="oracle-box">
-                                ${card.oracle_text ? card.oracle_text.replace(/
-/g, '<br>') : 'No oracle text.'}
-                            </div>
+                            <div class="oracle-box">${card.oracle_text || 'No oracle text available.'}</div>
                             ${card.rulings_uri ? `
                                 <div class="rulings-box">
-                                    <h3>Official Rulings</h3>
-                                    <div id="rulings-list">Loading rulings...</div>
+                                    <h4>📚 Official Rulings</h4>
+                                    <p>Loading rulings...</p>
                                 </div>
                             ` : ''}
                         </div>
                     </div>
                 `;
-
-                document.getElementById('ruling-overlay').classList.add('active');
-
-                // Load rulings if available
+                
+                // Fetch rulings if available
                 if (card.rulings_uri) {
-                    try {
-                        const rulingsResponse = await fetch(card.rulings_uri);
-                        const rulingsData = await rulingsResponse.json();
-                        const rulingsList = document.getElementById('rulings-list');
-                        if (rulingsData.data && rulingsData.data.length > 0) {
-                            rulingsList.innerHTML = rulingsData.data.slice(0, 3).map(r => 
-                                `<div class="ruling-item">• ${r.comment}</div>`
-                            ).join('');
-                        } else {
-                            rulingsList.innerHTML = '<div class="ruling-item">No official rulings available.</div>';
-                        }
-                    } catch (e) {
-                        document.getElementById('rulings-list').innerHTML = '<div class="ruling-item">Could not load rulings.</div>';
+                    const rulingsRes = await fetch(card.rulings_uri);
+                    const rulingsData = await rulingsRes.json();
+                    const rulingsBox = body.querySelector('.rulings-box');
+                    if (rulingsBox && rulingsData.data.length > 0) {
+                        rulingsBox.innerHTML = `
+                            <h4>📚 Official Rulings</h4>
+                            <ul style="list-style: none; padding: 0;">
+                                ${rulingsData.data.slice(0, 3).map(r => `
+                                    <li style="margin-bottom: 10px; padding-left: 20px; position: relative;">
+                                        <span style="position: absolute; left: 0;">•</span>
+                                        ${r.comment}
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        `;
                     }
                 }
-
-                const speech = `${card.name}. ${card.type_line}. ${card.oracle_text || ''}`;
-                speak(speech.substring(0, 300), () => {
-                    isProcessing = false;
-                });
-
-                window.sessionData.disputes.push({
-                    timestamp: new Date().toISOString(),
-                    type: 'card',
-                    cardName: card.name
-                });
-                disputeCount++;
-                updateTimer();
-
+                
+                speak(`${card.name}. ${card.type_line}. ${card.oracle_text || ''}`);
+                lastRuling = { type: 'card', card: card };
+                window.sessionData.rulingsGiven++;
+                window.sessionData.cardsReferenced.push(card.name);
+                addLog(`Card ruling: ${card.name}`, 'ruling');
+                
             } catch (error) {
-                errorCount++;
-                console.error('Error fetching card:', error);
-
-                const content = document.getElementById('ruling-content');
-
-                if (errorCount >= MAX_ERRORS) {
-                    content.innerHTML = `
-                        <div class="keyword-ruling">
-                            <div class="keyword-title">Voice Recognition Issue</div>
-                            <div class="keyword-description">
-                                <p>The Arbiter is having trouble understanding card names. Please type the card name instead.</p>
-                                <input type="text" id="manual-card-input" placeholder="Type card name..." 
-                                       style="width: 100%; padding: 15px; font-size: 18px; background: rgba(0,0,0,0.5); 
-                                       border: 2px solid #00a7b5; color: white; border-radius: 8px; margin-top: 20px;"
-                                       onkeydown="if(event.key==='Enter') searchManualCard()">
-                                <button onclick="searchManualCard()" 
-                                        style="margin-top: 15px; padding: 12px 30px; background: #00a7b5; color: white; 
-                                        border: none; border-radius: 25px; cursor: pointer; font-size: 16px;">
-                                    Search
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    const suggestions = await getSuggestions(cardName);
-                    content.innerHTML = `
-                        <div class="keyword-ruling">
-                            <div class="keyword-title">Card Not Found</div>
-                            <div class="keyword-description">
-                                <p>The Arbiter cannot locate "${cardName}" in the archives.</p>
-                                <p style="margin-top: 15px; color: #c9a86a;">Did you mean one of these?</p>
-                                <div id="suggestions" style="margin-top: 10px;"></div>
-                            </div>
-                        </div>
-                    `;
-
-                    const sugDiv = document.getElementById('suggestions');
-                    if (suggestions.length > 0) {
-                        sugDiv.innerHTML = suggestions.slice(0, 5).map(name => 
-                            `<button onclick="closeRuling(); showCardRuling('${name.replace(/'/g, "\'")}');" 
-                                    style="display: block; width: 100%; margin: 10px 0; padding: 12px; 
-                                    background: rgba(0,167,181,0.1); border: 1px solid #00a7b5; color: #00a7b5; 
-                                    border-radius: 8px; cursor: pointer; font-size: 16px; text-align: left;">
-                                ${name}
-                            </button>`
-                        ).join('');
-                    } else {
-                        sugDiv.innerHTML = '<p style="color: #8892b0; margin-top: 10px;">No suggestions found. Try again.</p>';
-                    }
-                }
-
-                document.getElementById('ruling-overlay').classList.add('active');
-                speak(`I cannot find ${cardName}. ${errorCount >= MAX_ERRORS ? 'Please type the card name.' : 'Try again, or choose a suggestion.'}`, () => {
-                    if (errorCount < MAX_ERRORS) {
-                        expectingCardName = true;
-                        setState(States.WAITING);
-                    }
-                    isProcessing = false;
-                });
+                body.innerHTML = `
+                    <div class="keyword-ruling">
+                        <h2>Card Not Found</h2>
+                        <p>Could not find "${cardName}". Please check the spelling or try a different card.</p>
+                    </div>
+                `;
+                speak(`I couldn't find the card ${cardName}. Please try again.`);
             }
         }
 
-        async function showComboRuling(cardNames) {
-            isProcessing = true;
-            setState(States.THINKING);
-
-            lastRulingData = { type: 'combo', cardNames };
-
-            speak(`Analyzing interaction between ${cardNames.join(' and ')}...`);
-
-            const cardPromises = cardNames.map(name => findCard(name));
-            const cards = await Promise.all(cardPromises);
-            const validCards = cards.filter(c => c !== null);
-
-            if (validCards.length < 2) {
-                speak('I could not find all the cards you mentioned. Try again.');
-                isProcessing = false;
-                return;
-            }
-
-            validCards.forEach(card => conversationContext.add('card', card.name));
-
-            const content = document.getElementById('ruling-content');
-            content.innerHTML = `
-                <div class="card-ruling" style="flex-direction: column; max-width: 900px;">
-                    <div class="keyword-title" style="margin-bottom: 20px;">Card Interaction</div>
-
+        function showComboRuling(cards) {
+            const overlay = document.getElementById('ruling-overlay');
+            const body = document.getElementById('ruling-body');
+            
+            body.innerHTML = `
+                <div class="keyword-ruling">
+                    <h2>⚔️ Interaction Analysis</h2>
+                    <p style="margin-bottom: 20px;">Analyzing interaction between: ${cards.join(' and ')}</p>
                     <div class="combo-grid">
-                        ${validCards.map(card => `
+                        ${cards.map(card => `
                             <div class="combo-card">
-                                <div class="card-image-container" style="width: 100%; height: 350px;">
-                                    ${card.image_uris ? 
-                                        `<img src="${card.image_uris.normal}" style="width: 100%; height: 100%; object-fit: contain;">` :
-                                        `<div class="card-placeholder">No image</div>`
-                                    }
-                                </div>
-                                <h3>${card.name}</h3>
+                                <h3 style="color: #00a7b5; margin-bottom: 10px;">${card}</h3>
+                                <p>Click to view card details</p>
+                                <button class="quick-action-btn" onclick="showCardRuling('${card}')" style="margin-top: 10px;">
+                                    View Card
+                                </button>
                             </div>
                         `).join('')}
                     </div>
-
-                    <div class="oracle-box" style="margin-bottom: 20px;">
-                        <h4>How They Work Together</h4>
-                        <p>Both cards are legal. Review each card's oracle text to determine the interaction. 
-                        Common interactions: replacement effects, triggered abilities, and modified costs all follow the stack rules.</p>
+                    <div class="keyword-example" style="margin-top: 30px;">
+                        <h4>💡 Interaction Note</h4>
+                        <p>When these cards interact, check timestamps (who played what first), protection abilities, and whether abilities trigger when entering/leaving the battlefield. Would you like me to explain a specific aspect of this interaction?</p>
                     </div>
-
-                    ${validCards.map(card => `
-                        <div class="keyword-example" style="margin-bottom: 15px;">
-                            <h4>${card.name}</h4>
-                            <p>${card.oracle_text || 'No oracle text.'}</p>
-                        </div>
-                    `).join('')}
                 </div>
             `;
-
-            document.getElementById('ruling-overlay').classList.add('active');
-
-            const speech = `${validCards[0].name} and ${validCards[1].name}. ${validCards[0].oracle_text ? validCards[0].oracle_text.substring(0, 100) : ''}. ${validCards[1].oracle_text ? validCards[1].oracle_text.substring(0, 100) : ''}.`;
-            speak(speech, () => {
-                isProcessing = false;
-            });
-
-            window.sessionData.disputes.push({
-                timestamp: new Date().toISOString(),
-                type: 'combo',
-                cards: validCards.map(c => c.name)
-            });
-            disputeCount++;
-            updateTimer();
+            
+            overlay.classList.add('show');
+            speak(`Analyzing ${cards.join(' and ')}. Click on a card to see details.`);
+            lastRuling = { type: 'combo', cards: cards };
+            window.sessionData.rulingsGiven++;
         }
 
-        function closeRuling() {
-            document.getElementById('ruling-overlay').classList.remove('active');
-            if (!isPaused) {
-                setState(States.LISTENING);
+        // ═══════════════════════════════════════
+        // BUTTON HANDLERS
+        // ═══════════════════════════════════════
+        function togglePause() {
+            isPaused = !isPaused;
+            const container = document.getElementById('listening-container');
+            const statusText = document.getElementById('status-text');
+            const statusSubtext = document.getElementById('status-subtext');
+            
+            if (isPaused) {
+                container.classList.remove('active');
+                statusText.textContent = 'Paused';
+                statusSubtext.textContent = 'Click Pause/Resume to continue';
+                if (recognition) recognition.stop();
+                addLog('Session paused', 'system');
+            } else {
+                container.classList.add('active');
+                statusText.textContent = 'Listening...';
+                statusSubtext.textContent = 'Speak a card name or ask a question';
+                if (recognition) recognition.start();
+                addLog('Session resumed', 'system');
             }
         }
 
         function repeatLastRuling() {
-            if (!lastRulingData) {
-                speak('No ruling to repeat.');
-                return;
-            }
-
-            if (lastRulingData.type === 'keyword') {
-                showKeywordRuling(lastRulingData.keyword, lastRulingData.data);
-            } else if (lastRulingData.type === 'card') {
-                showCardRuling(lastRulingData.cardName);
-            } else if (lastRulingData.type === 'multiple_keywords') {
-                showMultipleKeywords(lastRulingData.keywords);
-            } else if (lastRulingData.type === 'combo') {
-                showComboRuling(lastRulingData.cardNames);
-            } else if (lastRulingData.type === 'semantic') {
-                showSemanticAnswer(lastRulingData.analysis);
+            if (lastRuling) {
+                if (lastRuling.keyword) {
+                    showKeywordRuling(lastRuling.keyword, lastRuling.data);
+                } else if (lastRuling.type === 'card') {
+                    showCardRuling(lastRuling.card.name);
+                } else if (lastRuling.type === 'multiple') {
+                    showMultipleKeywords(lastRuling.keywords);
+                } else if (lastRuling.type === 'combo') {
+                    showComboRuling(lastRuling.cards);
+                } else if (lastRuling.answer) {
+                    showSemanticAnswer(lastRuling);
+                }
+                addLog('Repeated last ruling', 'system');
+            } else {
+                speak('No previous ruling to repeat.');
             }
         }
 
         function showManualSearch() {
-            const content = document.getElementById('ruling-content');
-            content.innerHTML = `
-                <div class="keyword-ruling">
-                    <div class="keyword-title">Manual Card Search</div>
-                    <div class="keyword-description">
-                        <input type="text" id="manual-search-input" placeholder="Enter card name..." 
-                               style="width: 100%; padding: 15px; font-size: 18px; background: rgba(0,0,0,0.5); 
-                               border: 2px solid #00a7b5; color: white; border-radius: 8px; margin-bottom: 15px;"
-                               onkeydown="if(event.key==='Enter') searchManualCardFromOverlay()">
-                        <button onclick="searchManualCardFromOverlay()" 
-                                style="padding: 12px 30px; background: #00a7b5; color: white; 
-                                border: none; border-radius: 25px; cursor: pointer; font-size: 16px;">
-                            Search
-                        </button>
-                    </div>
-                </div>
-            `;
-            document.getElementById('ruling-overlay').classList.add('active');
-            setTimeout(() => {
-                const input = document.getElementById('manual-search-input');
-                if (input) input.focus();
-            }, 100);
-        }
-
-        function searchManualCardFromOverlay() {
-            const input = document.getElementById('manual-search-input');
-            const cardName = input.value.trim();
+            const cardName = prompt('Enter card name:');
             if (cardName) {
-                errorCount = 0;
-                closeRuling();
                 showCardRuling(cardName);
             }
         }
 
-        function searchManualCard() {
-            const input = document.getElementById('manual-card-input');
-            if (input) {
-                const cardName = input.value.trim();
-                if (cardName) {
-                    errorCount = 0;
-                    closeRuling();
-                    showCardRuling(cardName);
-                }
-            }
-        }
-
         function showRuleReference() {
-            const content = document.getElementById('ruling-content');
-
-            const keywordList = Object.keys(keywords).sort();
-            const columns = Math.ceil(keywordList.length / 3);
-            const col1 = keywordList.slice(0, columns);
-            const col2 = keywordList.slice(columns, columns * 2);
-            const col3 = keywordList.slice(columns * 2);
-
-            content.innerHTML = `
+            const overlay = document.getElementById('ruling-overlay');
+            const body = document.getElementById('ruling-body');
+            
+            body.innerHTML = `
                 <div class="keyword-ruling">
-                    <div class="keyword-title">Quick Reference</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; text-align: left; margin-top: 20px;">
-                        <div>
-                            ${col1.map(k => `<button onclick="closeRuling(); showKeywordRuling('${k}', keywords['${k}']);" 
-                                style="display: block; width: 100%; margin-bottom: 8px; padding: 8px; background: rgba(0,167,181,0.1); 
-                                border: 1px solid rgba(0,167,181,0.3); color: #00a7b5; border-radius: 4px; cursor: pointer; text-align: left;">
-                                ${k}
-                            </button>`).join('')}
-                        </div>
-                        <div>
-                            ${col2.map(k => `<button onclick="closeRuling(); showKeywordRuling('${k}', keywords['${k}']);" 
-                                style="display: block; width: 100%; margin-bottom: 8px; padding: 8px; background: rgba(0,167,181,0.1); 
-                                border: 1px solid rgba(0,167,181,0.3); color: #00a7b5; border-radius: 4px; cursor: pointer; text-align: left;">
-                                ${k}
-                            </button>`).join('')}
-                        </div>
-                        <div>
-                            ${col3.map(k => `<button onclick="closeRuling(); showKeywordRuling('${k}', keywords['${k}']);" 
-                                style="display: block; width: 100%; margin-bottom: 8px; padding: 8px; background: rgba(0,167,181,0.1); 
-                                border: 1px solid rgba(0,167,181,0.3); color: #00a7b5; border-radius: 4px; cursor: pointer; text-align: left;">
-                                ${k}
-                            </button>`).join('')}
-                        </div>
+                    <h2>📚 Quick Rule Reference</h2>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
+                        ${Object.entries(keywords).slice(0, 12).map(([key, data]) => `
+                            <button class="quick-action-btn" onclick="showKeywordRuling('${key}', keywords['${key}']); event.stopPropagation();" style="text-align: left;">
+                                <strong>${key.toUpperCase()}</strong><br>
+                                <small style="opacity: 0.7;">${data.rule}</small>
+                            </button>
+                        `).join('')}
                     </div>
                 </div>
             `;
-            document.getElementById('ruling-overlay').classList.add('active');
+            overlay.classList.add('show');
         }
 
-        // ==========================================
+        function testManually() {
+            const tests = [
+                'how does trample work',
+                'what is hexproof',
+                'if I sacrifice a creature does it trigger',
+                'Lightning Bolt',
+                'trample vs deathtouch'
+            ];
+            const randomTest = tests[Math.floor(Math.random() * tests.length)];
+            console.log('🧪 MANUAL TEST:', randomTest);
+            addLog(`Test: "${randomTest}"`, 'system');
+            handleSpeech(randomTest);
+        }
+
+        function endSession() {
+            console.log('🏁 Ending session...');
+            window.sessionData.endTime = new Date().toISOString();
+            window.sessionData.gameLength = Math.floor((new Date() - new Date(window.sessionData.startTime)) / 1000);
+            
+            // Stop recognition
+            if (recognition) {
+                isPaused = true;
+                recognition.stop();
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('veritas_session', JSON.stringify(window.sessionData));
+            console.log('✅ Session saved:', window.sessionData);
+            
+            // Redirect to analysis
+            window.location.href = 'analysis.html';
+        }
+
+        function closeRuling(event) {
+            if (!event || event.target.id === 'ruling-overlay' || event.target.className === 'close-btn') {
+                document.getElementById('ruling-overlay').classList.remove('show');
+            }
+        }
+
+        // ═══════════════════════════════════════
         // MAIN SPEECH HANDLER
-        // ==========================================
+        // ═══════════════════════════════════════
         function handleSpeech(text) {
             if (isProcessing || isPaused) return;
 
-            console.log('=== handleSpeech called ===');
-            console.log('Text:', text);
-            console.log('isProcessing:', isProcessing);
-            console.log('isPaused:', isPaused);
+            console.log('🎤 Speech:', text);
+            isProcessing = true;
 
             addLog('You: ' + text, 'player');
             conversationContext.add('question', text);
 
             const analysis = analyzeQuestion(text);
-            console.log('Analysis result:', analysis);
+            console.log('📊 Analysis:', analysis.type);
 
-            // BYPASS dispute detection if keywords are found
-            // This ensures keyword questions ALWAYS work
+            // ═══ KEYWORDS BYPASS DISPUTE DETECTION ═══
             if (analysis.type === 'keyword' || 
                 analysis.type === 'multiple_keywords' ||
                 analysis.type === 'bypass_answer' || 
@@ -1836,81 +1261,56 @@
                 analysis.type === 'interaction_answer' || 
                 analysis.type === 'comparison_answer') {
 
-                console.log('Keyword/semantic detected - processing immediately');
+                console.log('✅ Keyword/semantic detected - processing immediately');
 
-                // Process keyword questions
+                // Semantic answers
                 if (analysis.type === 'bypass_answer' || 
                     analysis.type === 'prevention_answer' || 
                     analysis.type === 'interaction_answer' || 
                     analysis.type === 'comparison_answer') {
                     showSemanticAnswer(analysis);
+                    isProcessing = false;
                     return;
                 }
 
+                // Multiple keywords
                 if (analysis.type === 'multiple_keywords') {
                     showMultipleKeywords(analysis.keywords);
+                    isProcessing = false;
                     return;
                 }
 
+                // Single keyword
                 if (analysis.type === 'keyword') {
-                    if (analysis.hasCards && analysis.cards.length > 0) {
-                        showKeywordWithCard(analysis.keywords[0], analysis.cards[0]);
-                    } else {
-                        showKeywordRuling(analysis.keywords[0].keyword, analysis.keywords[0].data);
-                    }
+                    showKeywordRuling(analysis.keywords[0].keyword, analysis.keywords[0].data);
+                    isProcessing = false;
                     return;
                 }
             }
 
-            // For everything else, check dispute detection
+            // ═══ DISPUTE DETECTION ═══
             const disputeCheck = detector.analyze(text);
-            console.log('Dispute check:', disputeCheck);
-
             if (disputeCheck.detected) {
+                console.log('⚠️ Potential dispute detected:', disputeCheck.confidence);
+                disputeCount++;
+                window.sessionData.disputesDetected = disputeCount;
+                document.getElementById('dispute-counter').textContent = `Disputes: ${disputeCount}`;
+                
                 const indicator = document.getElementById('confidence-indicator');
                 const level = document.getElementById('confidence-level');
-                indicator.className = 'confidence-indicator ' + disputeCheck.confidence;
+                indicator.className = 'confidence-indicator show ' + disputeCheck.confidence;
                 level.textContent = disputeCheck.confidence;
 
                 setTimeout(() => {
                     indicator.className = 'confidence-indicator';
                 }, 3000);
-
-                // REMOVED: Don't filter out low confidence anymore
-                // if (disputeCheck.confidence === 'low') {
-                //     speak('I sense uncertainty. Please clarify your question.');
-                //     return;
-                // }
             }
 
-            // Handle semantic answers
-            if (analysis.type === 'bypass_answer' || 
-                analysis.type === 'prevention_answer' || 
-                analysis.type === 'interaction_answer' || 
-                analysis.type === 'comparison_answer') {
-                showSemanticAnswer(analysis);
-                return;
-            }
-
-            // Handle multiple keywords
-            if (analysis.type === 'multiple_keywords') {
-                showMultipleKeywords(analysis.keywords);
-                return;
-            }
-
-            // Handle single keyword
-            if (analysis.type === 'keyword') {
-                if (analysis.hasCards && analysis.cards.length > 0) {
-                    showKeywordWithCard(analysis.keywords[0], analysis.cards[0]);
-                } else {
-                    showKeywordRuling(analysis.keywords[0].keyword, analysis.keywords[0].data);
-                }
-                return;
-            }
-
+            // ═══ CARD HANDLING ═══
             // Handle combo (multiple cards)
             if (analysis.type === 'combo') {
                 showComboRuling(analysis.cards);
+                isProcessing = false;
                 return;
             }
 
@@ -1923,262 +1323,127 @@
                 } else {
                     showCardRuling(analysis.cards[0]);
                 }
+                isProcessing = false;
                 return;
             }
 
-            // Handle combo (multiple cards)
-            if (analysis.type === 'combo') {
-                showComboRuling(analysis.cards);
-                return;
-            }
-
-            // Handle single card
-            if (analysis.type === 'card') {
-                if (analysis.needsCardName) {
-                    expectingCardName = true;
-                    speak('What card are you asking about?');
-                    setState(States.WAITING);
-                } else {
-                    showCardRuling(analysis.cards[0]);
-                }
-                return;
-            }
-
-            // If we got here and dispute was detected, ask for clarification
+            // ═══ NO MATCH ═══
             if (disputeCheck.detected) {
                 speak('I heard you. Please ask about a specific card or rule.');
             } else {
-                console.log('No dispute detected, ignoring');
+                speak('I didn\'t understand. Try asking about a keyword like trample or hexproof, or say "help" for options.');
+            }
+            
+            isProcessing = false;
+        }
+
+        function setState(state) {
+            currentState = state;
+            const container = document.getElementById('listening-container');
+            const statusText = document.getElementById('status-text');
+            const statusSubtext = document.getElementById('status-subtext');
+            
+            switch(state) {
+                case States.LISTENING:
+                    container.classList.add('active');
+                    statusText.textContent = 'Listening...';
+                    statusSubtext.textContent = 'Speak a card name or ask a question';
+                    break;
+                case States.PROCESSING:
+                    container.classList.remove('active');
+                    statusText.textContent = 'Processing...';
+                    statusSubtext.textContent = 'Analyzing your question';
+                    break;
+                case States.WAITING:
+                    container.classList.remove('active');
+                    statusText.textContent = 'Waiting...';
+                    statusSubtext.textContent = 'Please provide more information';
+                    break;
             }
         }
 
-        async function showKeywordWithCard(keywordData, cardName) {
-            isProcessing = true;
-            setState(States.THINKING);
-
-            const content = document.getElementById('ruling-content');
-
-            // Fetch the card
-            const card = await findCard(cardName);
-
-            content.innerHTML = `
-                <div class="card-ruling" style="flex-direction: column;">
-                    <div class="keyword-title">${keywordData.keyword} with ${card ? card.name : cardName}</div>
-                    <div class="keyword-rule">Rule ${keywordData.data.rule}</div>
-
-                    <div style="display: flex; gap: 30px; margin-top: 20px;">
-                        ${card && card.image_uris ? `
-                            <div class="card-image-container" style="width: 250px; height: 350px;">
-                                <img src="${card.image_uris.normal}" style="width: 100%; height: 100%; object-fit: contain;">
-                            </div>
-                        ` : ''}
-                        <div style="flex: 1;">
-                            <div class="keyword-description">
-                                <h3 style="color: #00a7b5; margin-bottom: 10px;">${keywordData.keyword}</h3>
-                                <p>${keywordData.data.description}</p>
-                            </div>
-                            <div class="keyword-example">
-                                <h4>Example</h4>
-                                <p>${keywordData.data.example}</p>
-                            </div>
-                            ${card ? `
-                                <div class="oracle-box" style="margin-top: 15px;">
-                                    <strong>${card.name}:</strong> ${card.oracle_text || 'No oracle text'}
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            document.getElementById('ruling-overlay').classList.add('active');
-
-            const speech = `${keywordData.keyword}: ${keywordData.data.description}`;
-            speak(speech, () => {
-                isProcessing = false;
-            });
-
-            window.sessionData.disputes.push({
-                timestamp: new Date().toISOString(),
-                type: 'keyword_with_card',
-                keyword: keywordData.keyword,
-                cardName: cardName
-            });
-            disputeCount++;
-            updateTimer();
-        }
-
-        // ==========================================
-        // MANUAL TEST FUNCTION
-        // ==========================================
-        function testManually() {
-            console.log('=== MANUAL TEST ===');
-            const testPhrases = [
-                "How does hexproof work?",
-                "Wait, what is trample?",
-                "Can you explain deathtouch?"
-            ];
-
-            const phrase = testPhrases[Math.floor(Math.random() * testPhrases.length)];
-            addLog(`Testing with: ${phrase}`, 'system');
-            handleSpeech(phrase);
-        }
-
-        // ==========================================
+        // ═══════════════════════════════════════
         // SPEECH RECOGNITION SETUP
-        // ==========================================
+        // ═══════════════════════════════════════
         function setupSpeechRecognition() {
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                console.log('❌ Speech recognition not supported');
                 addLog('Speech recognition not supported in this browser', 'system');
-                document.getElementById('sub-text').textContent = 'Speech recognition not available - use manual search';
                 return;
             }
 
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
-
+            
             recognition.continuous = true;
-            recognition.interimResults = true;
+            recognition.interimResults = false;
             recognition.lang = 'en-US';
 
-            recognition.onstart = () => {
-                console.log('=== RECOGNITION STARTED ===');
-                addLog('Speech recognition started - SPEAK NOW', 'system');
-                // Flash the pulse to show it's active
-                const pulse = document.getElementById('pulse');
-                pulse.style.transform = 'scale(1.3)';
-                setTimeout(() => pulse.style.transform = 'scale(1)', 300);
+            recognition.onstart = function() {
+                console.log('🟢 Recognition started');
+                document.getElementById('debug-info').textContent = 'Listening';
             };
 
-            recognition.onspeechstart = () => {
-                console.log('=== SPEECH DETECTED ===');
-                addLog('Speech detected!', 'system');
-                document.getElementById('sub-text').textContent = 'I hear you speaking...';
+            recognition.onresult = function(event) {
+                const transcript = event.results[event.results.length - 1][0].transcript;
+                console.log('🗣️ Speech detected:', transcript);
+                handleSpeech(transcript);
             };
 
-            recognition.onspeechend = () => {
-                console.log('=== SPEECH ENDED ===');
-                addLog('Speech ended, processing...', 'system');
-            };
-
-            recognition.onresult = (event) => {
-                let finalTranscript = '';
-                let interimTranscript = '';
-
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    const transcript = event.results[i][0].transcript;
-                    if (event.results[i].isFinal) {
-                        finalTranscript += transcript;
-                    } else {
-                        interimTranscript += transcript;
-                    }
-                }
-
-                // ADD LOGGING
-                if (interimTranscript) {
-                    console.log('INTERIM:', interimTranscript);
-                    document.getElementById('sub-text').textContent = `Hearing: "${interimTranscript}..."`;
-                }
-
-                if (finalTranscript) {
-                    console.log('FINAL TRANSCRIPT:', finalTranscript);
-                    addLog(`Heard: ${finalTranscript}`, 'system');
-
-                    if (expectingCardName) {
-                        console.log('Expecting card name - calling showCardRuling');
-                        expectingCardName = false;
-                        showCardRuling(finalTranscript.trim());
-                    } else {
-                        console.log('Calling handleSpeech with:', finalTranscript);
-                        handleSpeech(finalTranscript.trim());
-                    }
-                }
-            };
-
-            recognition.onerror = (event) => {
-                console.error('Speech recognition error:', event.error);
-                if (event.error === 'no-speech') {
-                    // Restart automatically
-                } else if (event.error === 'audio-capture') {
-                    addLog('No microphone detected', 'system');
-                } else if (event.error === 'not-allowed') {
+            recognition.onerror = function(event) {
+                console.log('❌ Recognition error:', event.error);
+                if (event.error === 'not-allowed') {
                     addLog('Microphone access denied', 'system');
                 }
             };
 
-            recognition.onend = () => {
-                console.log('=== RECOGNITION ENDED ===');
-                addLog('Recognition ended', 'system');
-
-                if (!isPaused) {
-                    console.log('Auto-restarting in 300ms...');
-                    setTimeout(() => {
-                        try {
-                            recognition.start();
-                            console.log('Recognition restarted');
-                        } catch (e) {
-                            console.error('Failed to restart:', e);
-                            addLog(`ERROR restarting: ${e.message}`, 'system');
-                        }
-                    }, 300);  // Shorter delay
+            recognition.onend = function() {
+                console.log('⏹️ Recognition ended');
+                if (!isPaused && recognition) {
+                    recognition.start();
                 }
             };
 
             recognition.start();
         }
 
-        // ==========================================
+        // ═══════════════════════════════════════
         // PARTICLE SYSTEM
-        // ==========================================
+        // ═══════════════════════════════════════
         function createParticles() {
             const container = document.getElementById('particles');
-            const particleCount = 50;
-
-            for (let i = 0; i < particleCount; i++) {
+            for (let i = 0; i < 50; i++) {
                 const particle = document.createElement('div');
                 particle.className = 'particle';
                 particle.style.left = Math.random() * 100 + '%';
-                particle.style.animationDelay = Math.random() * 15 + 's';
+                particle.style.animationDelay = Math.random() * 20 + 's';
                 particle.style.animationDuration = (15 + Math.random() * 10) + 's';
-
-                const colors = ['rgba(0, 167, 181, 0.6)', 'rgba(201, 168, 106, 0.4)', 'rgba(74, 85, 104, 0.3)'];
-                particle.style.background = colors[Math.floor(Math.random() * colors.length)];
-
                 container.appendChild(particle);
             }
         }
 
-        // ==========================================
+        // ═══════════════════════════════════════
         // KEYBOARD SHORTCUTS
-        // ==========================================
+        // ═══════════════════════════════════════
         document.addEventListener('keydown', (e) => {
-            // ESC to close ruling
             if (e.key === 'Escape') {
                 closeRuling();
-            }
-
-            // Space to toggle pause (when not in input)
-            if (e.key === ' ' && e.target.tagName !== 'INPUT') {
+            } else if (e.key === ' ' && e.ctrlKey) {
                 e.preventDefault();
                 togglePause();
-            }
-
-            // R to repeat
-            if (e.key === 'r' || e.key === 'R') {
-                if (e.target.tagName !== 'INPUT') {
-                    repeatLastRuling();
-                }
+            } else if (e.key === 'r' && e.ctrlKey) {
+                e.preventDefault();
+                repeatLastRuling();
             }
         });
 
-        // ==========================================
+        // ═══════════════════════════════════════
         // INITIALIZATION
-        // ==========================================
+        // ═══════════════════════════════════════
         window.addEventListener('load', () => {
-            console.log('=== GAME SESSION LOADED ===');
+            console.log('🎮 VERITAS GAME SESSION LOADED');
             console.log('Keywords available:', Object.keys(keywords).length);
-            console.log('Sample keywords:', Object.keys(keywords).slice(0, 5));
-            console.log('Speech Recognition available:', 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
+            console.log('Speech API:', 'webkitSpeechRecognition' in window ? '✅' : '❌');
 
             createParticles();
             loadCardNames();
@@ -2187,8 +1452,16 @@
             addLog('Veritas the Arbiter is listening...', 'system');
             addLog('Try saying: "How does hexproof work?"', 'system');
 
+            // Update timer
+            setInterval(() => {
+                const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+                const hours = Math.floor(elapsed / 3600).toString().padStart(2, '0');
+                const minutes = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
+                const seconds = (elapsed % 60).toString().padStart(2, '0');
+                document.getElementById('session-timer').textContent = `${hours}:${minutes}:${seconds}`;
+            }, 1000);
+
             // Test keyword detection
-            console.log('Testing keyword detection...');
             const testText = "how does hexproof work";
             const result = analyzeQuestion(testText);
             console.log('Test result for "' + testText + '":', result);
@@ -2200,12 +1473,7 @@
             });
         });
 
-        // Handle voices loaded
-        if (speechSynthesis) {
-            speechSynthesis.onvoiceschanged = () => {
-                // Voices loaded
-            };
-        }
+        console.log('✅ Script loaded successfully');
     </script>
 </body>
 </html>
