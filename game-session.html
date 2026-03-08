@@ -1961,14 +1961,22 @@
         }
         recognition = new SR();
         recognition.continuous = true;
-        recognition.interimResults = true; // ← interim so we catch contradictions mid-sentence
+        recognition.interimResults = true;
         recognition.lang = 'en-US';
+        recognition.maxAlternatives = 1;
+
+        // isRestarting suppresses stale interim events Chrome re-emits
+        // from the previous fragment at the start of each new session
+        let isRestarting = false;
+        let restartTimer = null;
 
         recognition.onstart = () => {
+            isRestarting = false;
             document.getElementById('debug-info').textContent = 'Listening';
         };
 
         recognition.onresult = (e) => {
+            if (isRestarting) return;  // drop stale events during restart gap
             if (!e.results || e.results.length === 0) return;
             const result = e.results[e.results.length - 1];
             if (!result || !result[0]) return;
@@ -1983,13 +1991,25 @@
         };
 
         recognition.onerror = (e) => {
-            if (e.error !== 'no-speech') addLog('Mic error: ' + e.error, 'system');
-        };
-        recognition.onend = () => {
-            if (!isPaused) {
-                try { recognition.start(); } catch(e) { /* already running or page unloading */ }
+            // no-speech is normal silence; aborted is an intentional restart — skip both
+            if (e.error !== 'no-speech' && e.error !== 'aborted') {
+                addLog('Mic error: ' + e.error, 'system');
             }
         };
+
+        recognition.onend = () => {
+            if (isPaused) return;
+            isRestarting = true;
+            document.getElementById('debug-info').textContent = 'Reconnecting…';
+            if (restartTimer) clearTimeout(restartTimer);
+            // 150ms gap: short enough not to miss words, long enough to avoid InvalidStateError
+            restartTimer = setTimeout(() => {
+                if (!isPaused) {
+                    try { recognition.start(); } catch(e) {}
+                }
+            }, 150);
+        };
+
         recognition.start();
     }
 
@@ -2010,7 +2030,7 @@
             container.classList.add('active');
             statusText.textContent = 'Listening…';
             statusSubtext.textContent = 'Ask about a rule, keyword, or card name';
-            if (recognition) { try { recognition.start(); } catch(e) {} }
+            if (recognition) { try { recognition.stop(); } catch(e) {} setTimeout(() => { if (!isPaused) { try { recognition.start(); } catch(e) {} } }, 200); }
         }
     }
 
