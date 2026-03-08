@@ -1953,30 +1953,48 @@
         window.speechSynthesis.speak(utt);
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // SPEECH RECOGNITION ENGINE
+    // Chrome's Web Speech API stops itself on silence regardless of
+    // continuous=true. The only reliable approach is to treat each
+    // session as disposable: when onend fires, throw the object away
+    // and create a fresh one. This avoids InvalidStateError entirely
+    // and eliminates the stale-interim-event replay problem.
+    // ═══════════════════════════════════════════════════════════════
     function setupSpeechRecognition() {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SR) {
             addLog('Speech recognition not supported — use Chrome or Edge.', 'system');
             return;
         }
-        recognition = new SR();
+        startListening(SR);
+    }
+
+    function startListening(SR) {
+        if (isPaused) return;
+
+        // Always discard and recreate — never reuse a stopped recognition object
+        if (recognition) {
+            recognition.onstart = null;
+            recognition.onresult = null;
+            recognition.onerror = null;
+            recognition.onend = null;
+            try { recognition.abort(); } catch(e) {}
+        }
+
+        const SR2 = SR || window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SR2();
         recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = 'en-US';
         recognition.maxAlternatives = 1;
 
-        // isRestarting suppresses stale interim events Chrome re-emits
-        // from the previous fragment at the start of each new session
-        let isRestarting = false;
-        let restartTimer = null;
-
         recognition.onstart = () => {
-            isRestarting = false;
             document.getElementById('debug-info').textContent = 'Listening';
         };
 
         recognition.onresult = (e) => {
-            if (isRestarting) return;  // drop stale events during restart gap
+            if (isPaused) return;
             if (!e.results || e.results.length === 0) return;
             const result = e.results[e.results.length - 1];
             if (!result || !result[0]) return;
@@ -1991,26 +2009,36 @@
         };
 
         recognition.onerror = (e) => {
-            // no-speech is normal silence; aborted is an intentional restart — skip both
-            if (e.error !== 'no-speech' && e.error !== 'aborted') {
-                addLog('Mic error: ' + e.error, 'system');
+            // no-speech = normal silence gap, not an error
+            // aborted = we called abort() ourselves during restart
+            if (e.error === 'no-speech' || e.error === 'aborted') return;
+            // not-allowed = mic permission denied — tell the user
+            if (e.error === 'not-allowed') {
+                addLog('Microphone permission denied. Allow mic access and reload.', 'system');
+                document.getElementById('debug-info').textContent = 'Mic blocked';
+                return;
             }
+            addLog('Mic error: ' + e.error, 'system');
         };
 
         recognition.onend = () => {
-            if (isPaused) return;
-            isRestarting = true;
-            document.getElementById('debug-info').textContent = 'Reconnecting…';
-            if (restartTimer) clearTimeout(restartTimer);
-            // 150ms gap: short enough not to miss words, long enough to avoid InvalidStateError
-            restartTimer = setTimeout(() => {
-                if (!isPaused) {
-                    try { recognition.start(); } catch(e) {}
-                }
-            }, 150);
+            // Chrome fires onend on every silence cutout (~7-10s with no speech).
+            // We restart immediately with a fresh object rather than calling start()
+            // on the dead one — this is the only way to avoid the beep/gap cycle.
+            if (isPaused) {
+                document.getElementById('debug-info').textContent = 'Paused';
+                return;
+            }
+            // Tiny defer so the browser fully tears down before we create the next session
+            setTimeout(() => startListening(SR2), 50);
         };
 
-        recognition.start();
+        try {
+            recognition.start();
+        } catch(e) {
+            // If start fails, retry once after a short delay
+            setTimeout(() => startListening(SR2), 300);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -2025,12 +2053,15 @@
             container.classList.remove('active');
             statusText.textContent = 'Paused';
             statusSubtext.textContent = 'Click Pause/Resume to continue';
-            if (recognition) recognition.stop();
+            document.getElementById('debug-info').textContent = 'Paused';
+            // Kill current session — onend will fire but isPaused=true so it won't restart
+            if (recognition) { try { recognition.abort(); } catch(e) {} }
         } else {
             container.classList.add('active');
             statusText.textContent = 'Listening…';
             statusSubtext.textContent = 'Ask about a rule, keyword, or card name';
-            if (recognition) { try { recognition.stop(); } catch(e) {} setTimeout(() => { if (!isPaused) { try { recognition.start(); } catch(e) {} } }, 200); }
+            // Start a completely fresh session
+            startListening();
         }
     }
 
