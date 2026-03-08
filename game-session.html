@@ -1657,7 +1657,7 @@
         }).join('');
         const kwNames = kwList.slice(0,4).map(k => k.charAt(0).toUpperCase()+k.slice(1)).join(' + ');
         return `<div>
-            ${renderVerdict('info', kwNames, 'Multiple keywords detected — here's each one')}
+            ${renderVerdict('info', kwNames, "Multiple keywords detected — here's each one")}
             ${items}
             <div class="official-ruling" style="margin-top:8px;">
                 <div class="official-ruling-label">Official Rulings</div>
@@ -1814,7 +1814,7 @@
                 const topic = resolveContradictionTopic(text) || lastRuling.analysis;
                 triggerContradictionRuling(topic, text);
             } else {
-                speak('I'm listening. Ask me about a rule, keyword, or card name.');
+                speak("I'm listening. Ask me about a rule, keyword, or card name.");
                 addLog('Veritas: Ready — ask a question.', 'system');
             }
             return;
