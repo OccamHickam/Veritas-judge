@@ -1710,30 +1710,36 @@
     // ═══════════════════════════════════════════════════════════════
 
     const CONTRADICTION_TRIGGERS = [
-        // Must have "it" or "that" + does/doesn't — specific enough to not false-fire
+        // "no/yes it does/doesn't/can/can't/is/isn't"
         /\bno[,]? it (does|doesn'?t|did|didn'?t|can|can'?t|is|isn'?t)\b/i,
         /\byes[,]? it (does|doesn'?t|did|didn'?t|can|can'?t|is|isn'?t)\b/i,
-        // "that's not how it works" — very specific phrase
+        // "that's not how it works"
         /\bthat'?s? not how (it|that) works?\b/i,
         /\bit (doesn'?t?|does not) work like that\b/i,
-        // "you're wrong" / "that's wrong" — needs both words
+        // "you're wrong" / "that's wrong"
         /\byou'?re? (wrong|incorrect)\b/i,
         /\bthat'?s? (wrong|incorrect|not right)\b/i,
-        // "that's not what the rule says / the card says"
+        // "that's not what the rule/card says"
         /\bthat'?s? not what (the rule|the card|it) (says?|does|means?)\b/i,
-        // "you can't do that" — only fire if a rule-specific object is named
-        /\byou can'?t (block|tap|sacrifice|target|cast|equip|trigger) (that|it|with that)\b/i,
+        // "you can't [action] [anything]" — broadened to catch real speech like "you can't target my commander"
+        /\byou can'?t (block|tap|sacrifice|target|cast|equip|trigger|attack with)\b/i,
+        // "can't target" anywhere in sentence — catches "I can't target your commander"
+        /\bcan'?t target\b/i,
+        // "that's not true" — common dispute opener
+        /\bthat'?s? not true\b/i,
+        // "actually no" / "actually you can't"
+        /\bactually (no|you can'?t|that'?s?)\b/i,
         // Explicit calls to Veritas
         /\bask veritas\b/i,
         /\bcheck the ruling\b/i,
-        /\bread the card\b/i
+        /\bread the card\b/i,
+        /\bveritas\b/i
     ];
 
-    // Require at least 3 words in the partial transcript before checking
-    // Avoids firing on single words like "no" or "actually"
+    // Require at least 2 words — "veritas" alone is 1 word and handled separately below
     function checkForContradiction(text) {
         const wordCount = text.trim().split(/\s+/).length;
-        if (wordCount < 3) return false;
+        if (wordCount < 2) return false;
         return CONTRADICTION_TRIGGERS.some(p => p.test(text));
     }
 
@@ -1798,15 +1804,38 @@
             return;
         }
 
+        const lower = text.toLowerCase().trim();
+
+        // ── Wake word: "veritas" spoken alone or at end of sentence ──────
+        // e.g. "veritas", "ask veritas", "what does veritas say"
+        if (/\bveritas\b/i.test(text)) {
+            if (lastRuling) {
+                // Replay last ruling with dispute flag
+                const topic = resolveContradictionTopic(text) || lastRuling.analysis;
+                triggerContradictionRuling(topic, text);
+            } else {
+                speak('I'm listening. Ask me about a rule, keyword, or card name.');
+                addLog('Veritas: Ready — ask a question.', 'system');
+            }
+            return;
+        }
+
+        // ── Contradiction check on final result ───────────────────────────
+        // Catches dispute phrases that completed before interim could fire
+        // e.g. fast speakers, or sentences like "that's not true"
+        if (checkForContradiction(text)) {
+            const topic = resolveContradictionTopic(text);
+            triggerContradictionRuling(topic, text);
+            return;
+        }
+
+        // ── Intent gate ───────────────────────────────────────────────────
         // Only process if it looks like an intentional question or command
         // Ignore ambient table talk (short sentences, no question words, no keywords)
-        const lower = text.toLowerCase().trim();
         const hasKeyword = Object.keys(KEYWORDS).some(k => matchKw(k, lower));
         const isQuestion = /\b(what|how|does|do|can|why|when|explain|tell me|define|compare|difference between)\b/i.test(text);
         const isCardSearch = /\b(look up|search|find|show me|show card|card called)\b/i.test(text);
         const hasQuestionMark = text.includes('?');
-        // Card name: 1-5 words, none of which are common filler/question words
-        // Works with lowercase speech API output e.g. "lightning bolt", "sol ring"
         const fillerWords = new Set(['is','it','not','no','yes','i','my','me','we','you','how','what','why','when','does','do','can','will','its','that','this','if','so','ok','um','uh','wait','hey','was','a','an']);
         const words = lower.split(/\s+/).filter(Boolean);
         const looksLikeCardName = words.length >= 1 && words.length <= 5 && words.every(w => !fillerWords.has(w)) && !/[?!]/.test(text);
@@ -1822,7 +1851,6 @@
             if (speakText) speak(speakText);
             addLog('Ruling: ' + getRulingLabel(analysis), 'ruling');
         } else if (isCardSearch || hasQuestionMark || looksLikeCardName) {
-            // Only do card lookup if they explicitly asked for a card
             const cleaned = extractCardName(text);
             if (cleaned.length > 2) showCardRuling(cleaned);
         }
