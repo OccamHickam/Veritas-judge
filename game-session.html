@@ -127,6 +127,27 @@
             50%      { opacity: 0.9; box-shadow: 0 0 0 8px rgba(0,167,181,0); }
         }
 
+        /* ═══ ORB MIC STATES ═══ */
+        /* listening — default teal, normal speed */
+        .veritas-orb.state-listening .orb-ring  { border-color: rgba(0,167,181,0.15); animation-play-state: running; }
+        .veritas-orb.state-listening .orb-core  { border-color: rgba(0,167,181,0.2); }
+        .veritas-orb.state-listening .orb-dot   { background: rgba(0,167,181,0.5); }
+
+        /* reconnecting — amber, slower pulse */
+        .veritas-orb.state-reconnecting .orb-ring { border-color: rgba(255,180,0,0.2); animation-duration: 16s !important; }
+        .veritas-orb.state-reconnecting .orb-core  { border-color: rgba(255,180,0,0.25); background: radial-gradient(circle at 40% 35%, rgba(255,180,0,0.12) 0%, transparent 100%); }
+        .veritas-orb.state-reconnecting .orb-dot   { background: rgba(255,180,0,0.6); }
+
+        /* dead / mic blocked — red, rings stop */
+        .veritas-orb.state-dead .orb-ring { border-color: rgba(255,107,107,0.2); animation-play-state: paused; }
+        .veritas-orb.state-dead .orb-core  { border-color: rgba(255,107,107,0.25); background: radial-gradient(circle at 40% 35%, rgba(255,107,107,0.1) 0%, transparent 100%); }
+        .veritas-orb.state-dead .orb-dot   { background: rgba(255,107,107,0.5); }
+
+        /* paused — dim, rings slow way down */
+        .veritas-orb.state-paused .orb-ring { border-color: rgba(255,255,255,0.05); animation-duration: 24s !important; }
+        .veritas-orb.state-paused .orb-core  { border-color: rgba(255,255,255,0.06); background: none; }
+        .veritas-orb.state-paused .orb-dot   { background: rgba(255,255,255,0.15); }
+
         /* Standby wordmark */
         .veritas-wordmark {
             font-size: 11px; letter-spacing: 8px; text-transform: uppercase;
@@ -348,6 +369,25 @@
         .official-ruling-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: #444; font-weight: 600; margin-bottom: 6px; }
         .official-ruling-ref { font-family: monospace; font-size: 11px; color: #383838; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 5px; padding: 6px 10px; display: inline-block; }
 
+        /* ═══ KEYBOARD HINT ═══ */
+        .keyboard-hint {
+            position: fixed; bottom: 58px; left: 0; right: 0;
+            text-align: center;
+            font-size: 10px; letter-spacing: 1.5px;
+            color: rgba(255,255,255,0.08);
+            pointer-events: none;
+            text-transform: uppercase;
+        }
+        kbd {
+            font-family: 'Courier New', monospace;
+            font-size: 9px;
+            color: rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 3px;
+            padding: 1px 4px;
+        }
+
         /* ═══ RESPONSIVE ═══ */
         @media (max-width: 600px) {
             .card-ruling-grid { grid-template-columns: 1fr; }
@@ -386,6 +426,11 @@
         </div>
         <div class="veritas-wordmark">Veritas</div>
         <div class="standby-label" id="standby-label">Listening</div>
+    </div>
+
+    <!-- Keyboard hint -->
+    <div class="keyboard-hint">
+        <kbd>Esc</kbd> dismiss &nbsp;·&nbsp; <kbd>Ctrl+Space</kbd> pause &nbsp;·&nbsp; <kbd>Ctrl+R</kbd> repeat
     </div>
 
     <!-- Controls strip -->
@@ -1740,7 +1785,7 @@
         if (inSentence.length === 1) return { type: 'keyword', keyword: inSentence[0] };
 
         // 2. Scan recent buffer for keywords (last 3 utterances)
-        const recentKws = recentKeywordsFromBuffer(3);
+        const recentKws = recentKeywordsFromBuffer(6); // expanded from 3 — catches longer table conversations
         if (recentKws.length >= 2) {
             const interaction = getKnownInteraction(recentKws[0], recentKws[1]);
             if (interaction) return { type: 'semantic', data: interaction };
@@ -2076,6 +2121,7 @@
 
         recognition.onstart = () => {
             const dbg = document.getElementById('debug-info'); if(dbg) dbg.textContent = 'Listening';
+            setOrbState('listening');
         };
 
         recognition.onresult = (e) => {
@@ -2101,6 +2147,9 @@
             if (e.error === 'not-allowed') {
                 addLog('Microphone permission denied. Allow mic access and reload.', 'system');
                 const dbg2 = document.getElementById('debug-info'); if(dbg2) dbg2.textContent = 'Mic blocked';
+                setOrbState('dead');
+                const lbl = document.getElementById('standby-label');
+                if (lbl) lbl.textContent = 'Mic blocked — allow access and reload';
                 return;
             }
             addLog('Mic error: ' + e.error, 'system');
@@ -2111,10 +2160,11 @@
             // We restart immediately with a fresh object rather than calling start()
             // on the dead one — this is the only way to avoid the beep/gap cycle.
             if (isPaused) {
-                
+                setOrbState('paused');
                 return;
             }
-            // Tiny defer so the browser fully tears down before we create the next session
+            // Show reconnecting briefly while the new session spins up
+            setOrbState('reconnecting');
             setTimeout(() => startListening(SR2), 50);
         };
 
@@ -2136,9 +2186,11 @@
             if (lbl) lbl.textContent = 'Paused';
             document.getElementById('debug-info') && (document.getElementById('debug-info').textContent = 'Paused');
             if (recognition) { try { recognition.abort(); } catch(e) {} }
+            setOrbState('paused');
         } else {
             if (lbl) lbl.textContent = 'Listening';
             startListening();
+            setOrbState('listening');
         }
     }
 
@@ -2246,6 +2298,26 @@
             .sort((a, b) => b[1] - a[1])
             .slice(0, 5)
             .map(([kw]) => kw);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ORB STATE — visual mic status indicator
+    // states: listening | reconnecting | dead | paused
+    // ═══════════════════════════════════════════════════════════════
+    function setOrbState(state) {
+        const orb = document.querySelector('.veritas-orb');
+        const lbl = document.getElementById('standby-label');
+        if (!orb) return;
+        orb.classList.remove('state-listening', 'state-reconnecting', 'state-dead', 'state-paused');
+        orb.classList.add(`state-${state}`);
+        const labels = {
+            listening:    'Listening',
+            reconnecting: 'Reconnecting',
+            dead:         'Mic unavailable',
+            paused:       'Paused'
+        };
+        if (lbl && state !== 'listening') lbl.textContent = labels[state] || state;
+        else if (lbl) lbl.textContent = 'Listening';
     }
 
     function addLog(msg, type = 'system') {
