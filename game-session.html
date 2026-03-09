@@ -1682,6 +1682,9 @@
     let recognition = null;
     let contradictionFired = false;
     let contradictionResetTimer = null; // safety net: clears the flag if handleFinal never arrives
+    let rulingCooldown = false;         // prevents same ruling firing multiple times in a row
+    let rulingCooldownTimer = null;
+    const sessionDisputeLog = [];       // full log of every dispute this session
 
     // ═══════════════════════════════════════════════════════════════
     // CONTRADICTION DETECTOR
@@ -1846,6 +1849,12 @@
     // CONTRADICTION RULING — interrupt + flag
     // ═══════════════════════════════════════════════════════════════
     function triggerContradictionRuling(topic, triggerText) {
+        // Don't fire if a ruling just fired — prevents rapid repeat triggers
+        if (rulingCooldown) return;
+        rulingCooldown = true;
+        clearTimeout(rulingCooldownTimer);
+        rulingCooldownTimer = setTimeout(() => { rulingCooldown = false; }, 3000);
+
         playInterruptChime();
         wakeFlash();
 
@@ -1854,6 +1863,13 @@
         dcEl.textContent = `${disputeCount} dispute${disputeCount !== 1 ? 's' : ''}`;
         if (disputeCount > 0) dcEl.classList.add('has-disputes');
         addLog(`⚑ Contradiction detected: "${triggerText.slice(0, 60)}…"`, 'ruling');
+
+        // Log this dispute for end-of-session save
+        sessionDisputeLog.push({
+            topic: topic ? (topic.keyword || topic.keywords?.join('+') || topic.type) : 'unknown',
+            trigger_text: triggerText.slice(0, 120),
+            timestamp: new Date().toISOString()
+        });
 
         const confidence = topic ? 'high' : 'low';
 
@@ -2183,9 +2199,53 @@
         triggerContradictionRuling(topic, 'test trigger');
     }
 
-    function endSession() {
+    // ═══════════════════════════════════════════════════════════════
+    // END SESSION — save to backend then navigate away
+    // ═══════════════════════════════════════════════════════════════
+    const BACKEND_URL = 'https://your-railway-app.up.railway.app'; // ← swap this for your Railway URL
+
+    async function endSession() {
         if (recognition) { isPaused = true; recognition.stop(); }
+
+        // Build session summary
+        const durationSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
+        const topKeywords = getTopKeywordsFromBuffer();
+        const disputeLog = sessionDisputeLog;
+
+        const payload = {
+            duration_seconds: durationSeconds,
+            dispute_count: disputeCount,
+            top_keywords: topKeywords,
+            disputes: disputeLog,
+            ended_at: new Date().toISOString()
+        };
+
+        try {
+            await fetch(`${BACKEND_URL}/api/sessions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        } catch(e) {
+            // Save failed — don't block navigation, just log
+            console.warn('[Veritas] Session save failed:', e);
+        }
+
         window.location.href = 'index.html';
+    }
+
+    // Pull the most-mentioned keywords from the full conversation buffer
+    function getTopKeywordsFromBuffer() {
+        const counts = {};
+        for (const utterance of conversationBuffer) {
+            for (const kw of utterance.keywords) {
+                counts[kw] = (counts[kw] || 0) + 1;
+            }
+        }
+        return Object.entries(counts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([kw]) => kw);
     }
 
     function addLog(msg, type = 'system') {
