@@ -8,420 +8,393 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            background: #0a0a0f;
+            background: #060609;
             color: #e0e0e0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow-x: hidden;
-            min-height: 100vh;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
         }
 
-        /* ═══ PARTICLES ═══ */
-        #particles {
-            position: fixed; top: 0; left: 0;
-            width: 100%; height: 100%;
-            pointer-events: none; z-index: 0;
-        }
-        .particle {
-            position: absolute; width: 2px; height: 2px;
-            background: #00a7b5; border-radius: 50%; opacity: 0.3;
-            animation: float 20s infinite linear;
-        }
-        @keyframes float {
-            from { transform: translateY(100vh) translateX(0); }
-            to   { transform: translateY(-100vh) translateX(100px); }
-        }
-
-        /* ═══ LAYOUT ═══ */
-        #game-session {
-            position: relative; z-index: 1;
-            max-width: 1200px; margin: 0 auto;
-            padding: 90px 20px 40px;
+        /* ═══ AMBIENT CANVAS ═══ */
+        #ambient-canvas {
+            position: fixed; inset: 0;
+            z-index: 0; pointer-events: none;
         }
 
         /* ═══ STATUS BAR ═══ */
         .status-bar {
-            position: fixed; top: 0; left: 0; right: 0;
-            background: rgba(10,10,15,0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid #00a7b5;
-            padding: 12px 20px;
-            display: flex; justify-content: space-between; align-items: center;
-            z-index: 100;
+            position: fixed; top: 0; left: 0; right: 0; height: 52px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px;
+            background: rgba(6,6,9,0.7);
+            border-bottom: 1px solid rgba(0,167,181,0.12);
+            backdrop-filter: blur(12px);
+            z-index: 200;
         }
         .timer {
-            font-size: 22px; font-weight: bold;
-            color: #00a7b5; font-family: 'Courier New', monospace;
+            font-family: 'Courier New', monospace;
+            font-size: 17px; font-weight: 600;
+            color: rgba(0,167,181,0.6);
+            letter-spacing: 2px;
         }
         .dispute-counter {
-            background: rgba(255,107,107,0.2);
-            border: 1px solid #ff6b6b;
+            font-size: 12px; font-weight: 600;
+            color: rgba(255,107,107,0.5);
+            letter-spacing: 1px; text-transform: uppercase;
+        }
+        .dispute-counter.has-disputes {
             color: #ff6b6b;
-            padding: 6px 14px; border-radius: 20px;
-            font-size: 13px; font-weight: bold;
         }
-        .debug-info { font-size: 12px; color: #666; font-family: monospace; }
+        .status-bar-right {
+            display: flex; align-items: center; gap: 16px;
+        }
         .end-session-btn {
-            background: rgba(10,10,15,0.9);
-            border: 2px solid #00a7b5; color: #00a7b5;
-            padding: 8px 20px; border-radius: 25px;
-            font-size: 13px; text-transform: uppercase;
+            background: transparent;
+            border: 1px solid rgba(0,167,181,0.25); color: rgba(0,167,181,0.5);
+            padding: 6px 16px; border-radius: 20px;
+            font-size: 11px; text-transform: uppercase;
             letter-spacing: 2px; cursor: pointer;
-            transition: all 0.3s; backdrop-filter: blur(10px);
-        }
-        .end-session-btn:hover { background: #00a7b5; color: white; }
-
-        /* ═══ QUICK ACTIONS ═══ */
-        .quick-actions-bar {
-            display: flex; gap: 10px; margin-bottom: 25px;
-            flex-wrap: wrap; justify-content: center;
-        }
-        .quick-action-btn {
-            background: rgba(0,167,181,0.1);
-            border: 1px solid #00a7b5; color: #00a7b5;
-            padding: 9px 18px; border-radius: 20px;
-            cursor: pointer; font-size: 13px; transition: all 0.3s;
-        }
-        .quick-action-btn:hover {
-            background: #00a7b5; color: white; transform: translateY(-2px);
-        }
-
-        /* ═══ LISTENING ═══ */
-        .listening-container {
-            text-align: center; padding: 35px;
-            background: rgba(0,0,0,0.3); border-radius: 20px;
-            margin-bottom: 25px; border: 2px solid transparent;
             transition: all 0.3s;
         }
-        .listening-container.active {
-            border-color: #00a7b5;
-            box-shadow: 0 0 30px rgba(0,167,181,0.2);
+        .end-session-btn:hover {
+            border-color: #00a7b5; color: #00a7b5;
+            box-shadow: 0 0 12px rgba(0,167,181,0.2);
         }
-        .listening-pulse {
-            width: 80px; height: 80px; border-radius: 50%;
-            background: rgba(0,167,181,0.15);
-            margin: 0 auto 16px;
+
+        /* ═══ MAIN STANDBY SCREEN ═══ */
+        #standby-screen {
+            position: fixed; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 1;
+        }
+
+        /* The orb */
+        .veritas-orb {
+            position: relative;
+            width: 160px; height: 160px;
+            margin-bottom: 48px;
+        }
+        .orb-ring {
+            position: absolute; inset: 0;
+            border-radius: 50%;
+            border: 1px solid rgba(0,167,181,0.15);
+            animation: orbRing 8s infinite linear;
+        }
+        .orb-ring:nth-child(2) {
+            top: 12px; left: 12px; right: 12px; bottom: 12px;
+            border-color: rgba(0,167,181,0.1);
+            animation-duration: 12s;
+            animation-direction: reverse;
+        }
+        .orb-ring:nth-child(3) {
+            top: 24px; left: 24px; right: 24px; bottom: 24px;
+            border-color: rgba(0,167,181,0.08);
+            animation-duration: 6s;
+        }
+        @keyframes orbRing {
+            from { transform: rotate(0deg) scaleX(1); }
+            50%  { transform: rotate(180deg) scaleX(0.85); }
+            to   { transform: rotate(360deg) scaleX(1); }
+        }
+        .orb-core {
+            position: absolute;
+            top: 36px; left: 36px; right: 36px; bottom: 36px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 35%,
+                rgba(0,167,181,0.18) 0%,
+                rgba(0,80,90,0.08) 50%,
+                transparent 100%);
+            border: 1px solid rgba(0,167,181,0.2);
+            animation: orbBreath 6s ease-in-out infinite;
+        }
+        @keyframes orbBreath {
+            0%,100% { opacity: 0.6; transform: scale(1); }
+            50%      { opacity: 1;   transform: scale(1.04); }
+        }
+        .orb-dot {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: rgba(0,167,181,0.5);
+            transform: translate(-50%, -50%);
+            animation: dotPulse 6s ease-in-out infinite;
+        }
+        @keyframes dotPulse {
+            0%,100% { opacity: 0.3; box-shadow: 0 0 0 0 rgba(0,167,181,0); }
+            50%      { opacity: 0.9; box-shadow: 0 0 0 8px rgba(0,167,181,0); }
+        }
+
+        /* Standby wordmark */
+        .veritas-wordmark {
+            font-size: 11px; letter-spacing: 8px; text-transform: uppercase;
+            color: rgba(0,167,181,0.3);
+            margin-bottom: 12px;
+            font-weight: 300;
+        }
+        .standby-label {
+            font-size: 11px; letter-spacing: 4px; text-transform: uppercase;
+            color: rgba(255,255,255,0.1);
+            animation: labelFade 4s ease-in-out infinite;
+        }
+        @keyframes labelFade {
+            0%,100% { opacity: 0.4; }
+            50%      { opacity: 0.8; }
+        }
+
+        /* ═══ CONTROLS STRIP — bottom of screen ═══ */
+        .controls-strip {
+            position: fixed; bottom: 0; left: 0; right: 0; height: 52px;
             display: flex; align-items: center; justify-content: center;
+            gap: 8px;
+            background: rgba(6,6,9,0.6);
+            border-top: 1px solid rgba(255,255,255,0.04);
+            backdrop-filter: blur(12px);
+            z-index: 200;
         }
-        .listening-container.active .listening-pulse { animation: pulse 2s infinite; }
-        @keyframes pulse {
-            0%,100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.1); opacity: 0.7; }
+        .ctrl-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.07); color: rgba(255,255,255,0.3);
+            padding: 6px 14px; border-radius: 16px;
+            font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+            cursor: pointer; transition: all 0.25s;
         }
-        .mic-icon { font-size: 32px; color: #00a7b5; }
-        .status-text { font-size: 22px; color: #00a7b5; margin-bottom: 8px; }
-        .status-subtext { font-size: 13px; color: #666; }
+        .ctrl-btn:hover {
+            border-color: rgba(0,167,181,0.4); color: rgba(0,167,181,0.8);
+        }
 
-        /* ═══ LOG ═══ */
-        .log-container {
-            background: rgba(0,0,0,0.5); border-radius: 10px;
-            padding: 20px; max-height: 260px; overflow-y: auto;
-            margin-top: 20px;
+        /* ═══ WAKE FLASH — brief screen flash when Veritas fires ═══ */
+        #wake-flash {
+            position: fixed; inset: 0; z-index: 999;
+            background: rgba(0,167,181,0.12);
+            pointer-events: none; opacity: 0;
         }
-        .log-entry {
-            padding: 9px 12px; margin-bottom: 8px; border-radius: 5px;
-            font-size: 13px; animation: slideIn 0.3s ease;
+        @keyframes wakeFlashAnim {
+            0%   { opacity: 0.9; }
+            100% { opacity: 0; }
         }
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(-15px); }
-            to   { opacity: 1; transform: translateX(0); }
+        #wake-flash.fire {
+            animation: wakeFlashAnim 0.4s ease-out forwards;
         }
-        .log-entry.player  { background: rgba(0,167,181,0.1);  border-left: 3px solid #00a7b5; }
-        .log-entry.system  { background: rgba(255,255,255,0.04); border-left: 3px solid #555; font-style: italic; color: #888; }
-        .log-entry.ruling  { background: rgba(78,205,196,0.1);  border-left: 3px solid #4ecdc4; }
-
-        /* ═══ CONFIDENCE ═══ */
-        .confidence-indicator {
-            position: fixed; bottom: 20px; right: 20px;
-            background: rgba(10,10,15,0.9); border: 1px solid #333;
-            padding: 12px 16px; border-radius: 10px;
-            display: none; z-index: 100; font-size: 13px;
-        }
-        .confidence-indicator.show { display: block; }
-        .confidence-indicator.high   { border-color: #4ecdc4; box-shadow: 0 0 16px rgba(78,205,196,0.4); }
-        .confidence-indicator.medium { border-color: #ffe66d; box-shadow: 0 0 16px rgba(255,230,109,0.4); }
-        .confidence-indicator.low    { border-color: #ff6b6b; box-shadow: 0 0 16px rgba(255,107,107,0.4); }
 
         /* ═══ RULING OVERLAY ═══ */
         .ruling-overlay {
             position: fixed; inset: 0;
-            background: rgba(0,0,0,0.88);
+            background: rgba(0,0,0,0.92);
             display: none; align-items: center; justify-content: center;
             z-index: 1000; padding: 20px;
         }
         .ruling-overlay.show { display: flex; }
         .ruling-content {
-            background: linear-gradient(135deg, #111122 0%, #14152a 100%);
-            border: 1px solid #00a7b5;
+            background: linear-gradient(160deg, #0e0e1a 0%, #111122 100%);
+            border: 1px solid rgba(0,167,181,0.35);
             border-radius: 20px; padding: 36px;
             max-width: 820px; width: 100%;
             max-height: 90vh; overflow-y: auto;
             position: relative;
-            box-shadow: 0 0 60px rgba(0,167,181,0.2);
-            animation: rulingAppear 0.3s ease;
+            box-shadow: 0 0 80px rgba(0,167,181,0.15), 0 40px 80px rgba(0,0,0,0.6);
+            animation: rulingAppear 0.25s cubic-bezier(0.22,1,0.36,1);
         }
         @keyframes rulingAppear {
-            from { opacity: 0; transform: scale(0.97) translateY(10px); }
+            from { opacity: 0; transform: scale(0.96) translateY(16px); }
             to   { opacity: 1; transform: scale(1) translateY(0); }
         }
         .close-btn {
             position: absolute; top: 16px; right: 18px;
-            background: none; border: none; color: #555;
-            font-size: 22px; cursor: pointer; transition: color 0.2s;
+            background: none; border: none; color: rgba(255,255,255,0.2);
+            font-size: 20px; cursor: pointer; transition: color 0.2s;
+            line-height: 1;
         }
         .close-btn:hover { color: #00a7b5; }
 
-        /* ═══ RULING CONTENT TYPES ═══ */
-
-        /* — Keyword — */
+        /* ═══ RULING CONTENT ═══ */
         .ruling-keyword-badge {
             display: inline-block;
-            background: rgba(0,167,181,0.15);
-            border: 1px solid #00a7b5;
-            color: #00a7b5; font-size: 11px;
+            background: rgba(0,167,181,0.12);
+            border: 1px solid rgba(0,167,181,0.3);
+            color: #00a7b5; font-size: 10px;
             letter-spacing: 2px; text-transform: uppercase;
             padding: 3px 10px; border-radius: 20px;
             margin-bottom: 12px;
         }
         .ruling-title {
-            font-size: 30px; font-weight: 700;
-            color: #fff; margin-bottom: 6px; letter-spacing: 1px;
-        }
-        .ruling-rule-ref {
-            font-family: 'Courier New', monospace;
-            font-size: 12px; color: #4ecdc4;
-            margin-bottom: 20px; opacity: 0.8;
+            font-size: 28px; font-weight: 700;
+            color: #fff; margin-bottom: 6px; letter-spacing: 0.5px;
         }
         .ruling-plain {
-            font-size: 17px; line-height: 1.75;
-            color: #d0d0d0; margin-bottom: 24px;
+            font-size: 16px; line-height: 1.8;
+            color: #ccc; margin-bottom: 22px;
         }
         .ruling-plain strong { color: #fff; }
         .ruling-example-box {
-            background: rgba(255,230,109,0.06);
-            border-left: 3px solid #ffe66d;
-            padding: 16px 20px; border-radius: 0 10px 10px 0;
-            margin-bottom: 20px;
+            background: rgba(255,230,109,0.05);
+            border-left: 3px solid rgba(255,230,109,0.4);
+            padding: 14px 18px; border-radius: 0 10px 10px 0;
+            margin-bottom: 18px;
         }
         .ruling-example-box .ex-label {
-            color: #ffe66d; font-size: 12px;
+            color: rgba(255,230,109,0.7); font-size: 11px;
             text-transform: uppercase; letter-spacing: 1px;
-            margin-bottom: 8px; font-weight: 600;
+            margin-bottom: 6px; font-weight: 600;
         }
-        .ruling-example-box p { font-size: 14px; line-height: 1.6; color: #c8c8c8; }
-
-        /* — Interaction chips — */
-        .ruling-also {
-            margin-top: 16px; padding-top: 16px;
-            border-top: 1px solid rgba(255,255,255,0.06);
-        }
-        .ruling-also-label {
-            font-size: 11px; color: #555;
-            text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;
-        }
-        .keyword-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .ruling-example-box p { font-size: 14px; line-height: 1.6; color: #bbb; }
+        .ruling-also { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.05); }
+        .ruling-also-label { font-size: 10px; color: #444; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .keyword-chips { display: flex; flex-wrap: wrap; gap: 7px; }
         .keyword-chip {
-            background: rgba(0,167,181,0.08);
-            border: 1px solid rgba(0,167,181,0.3);
-            color: #4ecdc4; padding: 5px 12px;
-            border-radius: 20px; font-size: 12px; cursor: pointer;
+            background: rgba(0,167,181,0.06);
+            border: 1px solid rgba(0,167,181,0.2);
+            color: rgba(78,205,196,0.8); padding: 4px 12px;
+            border-radius: 20px; font-size: 11px; cursor: pointer;
             transition: all 0.2s;
         }
-        .keyword-chip:hover { background: rgba(0,167,181,0.2); }
-
-        /* — Interaction answer — */
+        .keyword-chip:hover { background: rgba(0,167,181,0.15); color: #4ecdc4; }
         .ruling-answer-tag {
-            display: inline-block;
-            padding: 4px 14px; border-radius: 20px;
-            font-size: 12px; font-weight: 700;
-            letter-spacing: 1px; text-transform: uppercase;
-            margin-bottom: 14px;
+            display: inline-block; padding: 4px 14px; border-radius: 20px;
+            font-size: 11px; font-weight: 700; letter-spacing: 1px;
+            text-transform: uppercase; margin-bottom: 14px;
         }
-        .ruling-answer-tag.yes { background: rgba(78,205,196,0.2); color: #4ecdc4; border: 1px solid #4ecdc4; }
-        .ruling-answer-tag.no  { background: rgba(255,107,107,0.2); color: #ff6b6b; border: 1px solid #ff6b6b; }
-        .ruling-answer-tag.depends { background: rgba(255,230,109,0.15); color: #ffe66d; border: 1px solid #ffe66d; }
-        .ruling-answer-tag.info { background: rgba(0,167,181,0.15); color: #00a7b5; border: 1px solid #00a7b5; }
-
-        .ruling-answer-body {
-            font-size: 16px; line-height: 1.8; color: #d0d0d0; margin-bottom: 22px;
-        }
+        .ruling-answer-tag.yes     { background: rgba(78,205,196,0.15); color: #4ecdc4; border: 1px solid rgba(78,205,196,0.4); }
+        .ruling-answer-tag.no      { background: rgba(255,107,107,0.15); color: #ff6b6b; border: 1px solid rgba(255,107,107,0.4); }
+        .ruling-answer-tag.depends { background: rgba(255,230,109,0.1);  color: #ffe66d; border: 1px solid rgba(255,230,109,0.35); }
+        .ruling-answer-tag.info    { background: rgba(0,167,181,0.12);   color: #00a7b5; border: 1px solid rgba(0,167,181,0.3); }
+        .ruling-answer-body { font-size: 15px; line-height: 1.8; color: #ccc; margin-bottom: 20px; }
         .ruling-answer-body .highlight { color: #fff; font-weight: 600; }
         .ruling-answer-body .teal { color: #4ecdc4; }
         .ruling-answer-body .gold { color: #ffe66d; }
         .ruling-answer-body .red  { color: #ff8080; }
-
         .ruling-nuance {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.07);
-            border-radius: 10px; padding: 16px 18px;
-            font-size: 13px; color: #999; line-height: 1.6;
-            margin-bottom: 16px;
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px; padding: 14px 16px;
+            font-size: 13px; color: #888; line-height: 1.6; margin-bottom: 14px;
         }
         .ruling-nuance .nuance-title {
-            color: #00a7b5; font-size: 11px;
+            color: #00a7b5; font-size: 10px;
             text-transform: uppercase; letter-spacing: 1px;
-            margin-bottom: 6px; font-weight: 600;
+            margin-bottom: 5px; font-weight: 600;
         }
-
-        /* — Card — */
-        .card-ruling-grid {
-            display: grid; grid-template-columns: 240px 1fr;
-            gap: 28px; align-items: start;
-        }
-        .card-img-wrap {
-            background: rgba(0,0,0,0.4);
-            border-radius: 12px; padding: 16px; text-align: center;
-        }
-        .card-image {
-            max-width: 100%; border-radius: 10px;
-            box-shadow: 0 8px 28px rgba(0,0,0,0.5);
-        }
-        .card-details h2 { color: #00a7b5; font-size: 26px; margin-bottom: 4px; }
-        .card-type { color: #777; font-style: italic; margin-bottom: 18px; font-size: 14px; }
+        .card-ruling-grid { display: grid; grid-template-columns: 220px 1fr; gap: 24px; align-items: start; }
+        .card-img-wrap { background: rgba(0,0,0,0.4); border-radius: 12px; padding: 12px; text-align: center; }
+        .card-image { max-width: 100%; border-radius: 8px; box-shadow: 0 8px 28px rgba(0,0,0,0.6); }
+        .card-details h2 { color: #00a7b5; font-size: 22px; margin-bottom: 4px; }
+        .card-type { color: #666; font-style: italic; margin-bottom: 14px; font-size: 13px; }
         .oracle-box {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.07);
-            padding: 16px; border-radius: 10px;
-            margin-bottom: 16px; line-height: 1.65; font-size: 14px;
-            white-space: pre-wrap;
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+            padding: 14px; border-radius: 8px; margin-bottom: 14px;
+            line-height: 1.65; font-size: 14px; white-space: pre-wrap;
         }
-        .rulings-box { background: rgba(0,167,181,0.04); padding: 16px; border-radius: 10px; }
-        .rulings-box h4 { color: #4ecdc4; margin-bottom: 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
-        .rulings-box li { margin-bottom: 8px; font-size: 13px; color: #aaa; list-style: none; padding-left: 16px; position: relative; }
-        .rulings-box li::before { content: '→'; position: absolute; left: 0; color: #4ecdc4; }
-
-        /* — Multi-keyword — */
-        .multi-kw-item {
-            padding: 18px; margin-bottom: 14px;
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.07);
-            border-radius: 12px;
-        }
-        .multi-kw-item h3 { color: #00a7b5; margin-bottom: 6px; font-size: 18px; }
-        .multi-kw-item .rule-ref { font-family: monospace; font-size: 11px; color: #4ecdc4; margin-bottom: 8px; }
-        .multi-kw-item p { font-size: 14px; color: #bbb; line-height: 1.6; }
-
-        /* — Compare — */
-        .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
-        .compare-col { background: rgba(255,255,255,0.03); border-radius: 10px; padding: 18px; border: 1px solid rgba(255,255,255,0.06); }
-        .compare-col h4 { color: #00a7b5; margin-bottom: 10px; font-size: 16px; }
-        .compare-col ul { padding-left: 16px; }
-        .compare-col li { font-size: 13px; color: #bbb; line-height: 1.8; }
-        .compare-verdict {
-            background: rgba(0,167,181,0.07);
-            border: 1px solid rgba(0,167,181,0.25);
-            border-radius: 10px; padding: 14px 18px; font-size: 14px; color: #ccc; line-height: 1.6;
-        }
+        .rulings-box { background: rgba(0,167,181,0.03); padding: 14px; border-radius: 8px; }
+        .rulings-box h4 { color: #4ecdc4; margin-bottom: 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        .rulings-box li { margin-bottom: 7px; font-size: 13px; color: #999; list-style: none; padding-left: 14px; position: relative; }
+        .rulings-box li::before { content: "→"; position: absolute; left: 0; color: #4ecdc4; }
+        .multi-kw-item { padding: 16px; margin-bottom: 12px; background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; }
+        .multi-kw-item h3 { color: #00a7b5; margin-bottom: 4px; font-size: 16px; }
+        .multi-kw-item .rule-ref { font-family: monospace; font-size: 10px; color: #4ecdc4; margin-bottom: 6px; }
+        .multi-kw-item p { font-size: 13px; color: #aaa; line-height: 1.6; }
+        .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 18px 0; }
+        .compare-col { background: rgba(255,255,255,0.025); border-radius: 10px; padding: 16px; border: 1px solid rgba(255,255,255,0.05); }
+        .compare-col h4 { color: #00a7b5; margin-bottom: 8px; font-size: 14px; }
+        .compare-col ul { padding-left: 14px; }
+        .compare-col li { font-size: 12px; color: #bbb; line-height: 1.8; }
+        .compare-verdict { background: rgba(0,167,181,0.06); border: 1px solid rgba(0,167,181,0.2); border-radius: 10px; padding: 12px 16px; font-size: 13px; color: #bbb; line-height: 1.6; }
         .compare-verdict strong { color: #4ecdc4; }
 
-        /* ═══ DISPUTE FLAG ═══ */
+        /* ═══ DISPUTE BANNER (inside ruling panel) ═══ */
         .dispute-flag {
             display: flex; align-items: center; gap: 10px;
-            background: rgba(255,107,107,0.12);
-            border: 1px solid rgba(255,107,107,0.5);
-            border-radius: 10px; padding: 12px 16px;
-            margin-bottom: 20px;
-            animation: disputeFlash 0.4s ease;
+            background: rgba(255,107,107,0.08);
+            border: 1px solid rgba(255,107,107,0.3);
+            border-radius: 10px; padding: 10px 14px; margin-bottom: 18px;
+            animation: disputeFlash 0.5s ease;
         }
         @keyframes disputeFlash {
-            0%   { background: rgba(255,107,107,0.35); }
-            100% { background: rgba(255,107,107,0.12); }
+            0%   { background: rgba(255,107,107,0.25); }
+            100% { background: rgba(255,107,107,0.08); }
         }
-        .dispute-flag-icon { font-size: 18px; }
-        .dispute-flag-text { font-size: 13px; color: #ff8080; line-height: 1.4; }
-        .dispute-flag-text strong { color: #ff6b6b; font-size: 14px; display: block; margin-bottom: 2px; }
-
+        .dispute-flag-icon { font-size: 16px; }
+        .dispute-flag-text { font-size: 12px; color: rgba(255,128,128,0.8); line-height: 1.4; }
+        .dispute-flag-text strong { color: #ff6b6b; font-size: 13px; display: block; margin-bottom: 1px; }
         .ruling-content.dispute-mode {
-            border-color: #ff6b6b;
-            box-shadow: 0 0 60px rgba(255,107,107,0.25);
+            border-color: rgba(255,107,107,0.4);
+            box-shadow: 0 0 80px rgba(255,107,107,0.12), 0 40px 80px rgba(0,0,0,0.6);
         }
 
         /* ═══ VERDICT BANNER ═══ */
         .verdict-banner {
             display: flex; align-items: center; gap: 14px;
-            border-radius: 14px; padding: 18px 22px;
-            margin-bottom: 22px;
+            border-radius: 12px; padding: 16px 20px; margin-bottom: 20px;
         }
-        .verdict-banner.yes  { background: rgba(78,205,196,0.12); border: 1px solid rgba(78,205,196,0.4); }
-        .verdict-banner.no   { background: rgba(255,107,107,0.12); border: 1px solid rgba(255,107,107,0.4); }
-        .verdict-banner.depends { background: rgba(255,230,109,0.1); border: 1px solid rgba(255,230,109,0.35); }
-        .verdict-banner.info { background: rgba(0,167,181,0.1); border: 1px solid rgba(0,167,181,0.3); }
-        .verdict-icon { font-size: 28px; line-height: 1; flex-shrink: 0; }
+        .verdict-banner.yes     { background: rgba(78,205,196,0.09);  border: 1px solid rgba(78,205,196,0.3); }
+        .verdict-banner.no      { background: rgba(255,107,107,0.09); border: 1px solid rgba(255,107,107,0.3); }
+        .verdict-banner.depends { background: rgba(255,230,109,0.07); border: 1px solid rgba(255,230,109,0.3); }
+        .verdict-banner.info    { background: rgba(0,167,181,0.08);   border: 1px solid rgba(0,167,181,0.25); }
+        .verdict-icon { font-size: 26px; line-height: 1; flex-shrink: 0; }
         .verdict-text { flex: 1; }
-        .verdict-statement {
-            font-size: 20px; font-weight: 700; line-height: 1.3;
-            margin-bottom: 4px;
-        }
-        .verdict-banner.yes  .verdict-statement { color: #4ecdc4; }
-        .verdict-banner.no   .verdict-statement { color: #ff6b6b; }
+        .verdict-statement { font-size: 19px; font-weight: 700; line-height: 1.3; margin-bottom: 3px; }
+        .verdict-banner.yes     .verdict-statement { color: #4ecdc4; }
+        .verdict-banner.no      .verdict-statement { color: #ff6b6b; }
         .verdict-banner.depends .verdict-statement { color: #ffe66d; }
-        .verdict-banner.info .verdict-statement { color: #00a7b5; }
-        .verdict-reason { font-size: 13px; color: #999; line-height: 1.4; }
-
-        .ruling-body-text {
-            font-size: 15px; line-height: 1.8; color: #d0d0d0; margin-bottom: 20px;
-        }
+        .verdict-banner.info    .verdict-statement { color: #00a7b5; }
+        .verdict-reason { font-size: 12px; color: #666; line-height: 1.4; }
+        .ruling-body-text { font-size: 15px; line-height: 1.8; color: #ccc; margin-bottom: 18px; }
         .ruling-body-text .highlight { color: #fff; font-weight: 600; }
         .ruling-body-text .teal { color: #4ecdc4; }
         .ruling-body-text .gold { color: #ffe66d; }
         .ruling-body-text .red  { color: #ff8080; }
-
-        .official-ruling {
-            margin-top: 20px;
-            border-top: 1px solid rgba(255,255,255,0.07);
-            padding-top: 16px;
-        }
-        .official-ruling-label {
-            font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px;
-            color: #555; font-weight: 600; margin-bottom: 8px;
-        }
-        .official-ruling-ref {
-            font-family: monospace; font-size: 12px; color: #444;
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 6px; padding: 8px 12px; display: inline-block;
-        }
+        .official-ruling { margin-top: 18px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 14px; }
+        .official-ruling-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: #444; font-weight: 600; margin-bottom: 6px; }
+        .official-ruling-ref { font-family: monospace; font-size: 11px; color: #383838; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 5px; padding: 6px 10px; display: inline-block; }
 
         /* ═══ RESPONSIVE ═══ */
         @media (max-width: 600px) {
             .card-ruling-grid { grid-template-columns: 1fr; }
             .compare-grid { grid-template-columns: 1fr; }
-            .ruling-content { padding: 24px 18px; }
-            .ruling-title { font-size: 24px; }
+            .ruling-content { padding: 22px 16px; }
+            .ruling-title { font-size: 22px; }
+            .veritas-orb { width: 120px; height: 120px; }
         }
     </style>
 </head>
 <body>
-    <div id="particles"></div>
+
+    <!-- Wake flash overlay -->
+    <div id="wake-flash"></div>
+
+    <!-- Ambient canvas -->
+    <canvas id="ambient-canvas"></canvas>
 
     <!-- Status Bar -->
     <div class="status-bar">
         <div class="timer" id="session-timer">00:00:00</div>
-        <div class="dispute-counter" id="dispute-counter">Disputes: 0</div>
-        <div class="debug-info" id="debug-info">Ready</div>
-        <button class="end-session-btn" onclick="endSession()">← End Session</button>
+        <div class="dispute-counter" id="dispute-counter">0 disputes</div>
+        <div class="status-bar-right">
+            <button class="end-session-btn" onclick="endSession()">End Session</button>
+        </div>
     </div>
 
-    <!-- Main -->
-    <div id="game-session">
-        <div class="quick-actions-bar">
-            <button class="quick-action-btn" onclick="togglePause()">⏯ Pause/Resume</button>
-            <button class="quick-action-btn" onclick="repeatLastRuling()">🔄 Repeat Last</button>
-            <button class="quick-action-btn" onclick="showManualSearch()">🔍 Manual Search</button>
-            <button class="quick-action-btn" onclick="showRuleReference()">📚 Keywords</button>
-            <button class="quick-action-btn" onclick="testManually()">🧪 Test</button>
+    <!-- Standby screen -->
+    <div id="standby-screen">
+        <div class="veritas-orb">
+            <div class="orb-ring"></div>
+            <div class="orb-ring"></div>
+            <div class="orb-ring"></div>
+            <div class="orb-core"></div>
+            <div class="orb-dot"></div>
         </div>
+        <div class="veritas-wordmark">Veritas</div>
+        <div class="standby-label" id="standby-label">Listening</div>
+    </div>
 
-        <div class="confidence-indicator" id="confidence-indicator">
-            Dispute detected — <span id="confidence-level">-</span> confidence
-        </div>
-
-        <div class="listening-container active" id="listening-container">
-            <div class="listening-pulse"><div class="mic-icon">🎤</div></div>
-            <div class="status-text" id="status-text">Listening…</div>
-            <div class="status-subtext" id="status-subtext">Ask about a rule, keyword, or card name</div>
-        </div>
-
-        <div class="log-container" id="log-container"></div>
+    <!-- Controls strip -->
+    <div class="controls-strip">
+        <button class="ctrl-btn" onclick="togglePause()">⏯ Pause</button>
+        <button class="ctrl-btn" onclick="repeatLastRuling()">↩ Repeat</button>
+        <button class="ctrl-btn" onclick="showManualSearch()">⌕ Card Lookup</button>
+        <button class="ctrl-btn" onclick="showRuleReference()">≡ Keywords</button>
+        <button class="ctrl-btn" onclick="testManually()">⚡ Test</button>
     </div>
 
     <!-- Ruling Overlay -->
@@ -1676,18 +1649,23 @@
 
     function bufferAdd(text) {
         const lower = text.toLowerCase();
-        const foundKws = Object.keys(KEYWORDS).filter(k => matchKw(k, lower)).sort((a,b) => b.length - a.length);
+        // Keywords sorted by position in sentence — preserves mention order
+        const foundKws = Object.keys(KEYWORDS)
+            .filter(k => matchKw(k, lower))
+            .sort((a, b) => lower.indexOf(a) - lower.indexOf(b));
         conversationBuffer.push({ text, lower, keywords: foundKws, timestamp: Date.now() });
         if (conversationBuffer.length > BUFFER_SIZE) conversationBuffer.shift();
     }
 
-    // Scan buffer (newest first) for any keyword mentions in last N utterances
+    // Scan buffer newest-first so the most recently mentioned keywords
+    // are at the front — resolveContradictionTopic picks [0] and [1] as
+    // the primary topic so order matters
     function recentKeywordsFromBuffer(lookback = 3) {
-        const recent = conversationBuffer.slice(-lookback);
+        const recent = conversationBuffer.slice(-lookback).reverse();
         const seen = new Set();
         const kws = [];
-        for (let i = recent.length - 1; i >= 0; i--) {
-            for (const kw of recent[i].keywords) {
+        for (const utterance of recent) {
+            for (const kw of utterance.keywords) {
                 if (!seen.has(kw)) { seen.add(kw); kws.push(kw); }
             }
         }
@@ -1703,6 +1681,7 @@
     let sessionStartTime = Date.now();
     let recognition = null;
     let contradictionFired = false;
+    let contradictionResetTimer = null; // safety net: clears the flag if handleFinal never arrives
 
     // ═══════════════════════════════════════════════════════════════
     // CONTRADICTION DETECTOR
@@ -1784,6 +1763,14 @@
 
         // Fire immediately
         contradictionFired = true;
+
+        // Safety net: if handleFinal never arrives (speech restart mid-utterance),
+        // auto-reset after 2s so Veritas doesn't go permanently deaf
+        clearTimeout(contradictionResetTimer);
+        contradictionResetTimer = setTimeout(() => {
+            contradictionFired = false;
+        }, 2000);
+
         const topic = resolveContradictionTopic(partialText);
         triggerContradictionRuling(topic, partialText);
     }
@@ -1795,65 +1782,34 @@
     function handleFinal(text) {
         if (isPaused) return;
 
+        // Always buffer everything — Veritas is always building context silently
         bufferAdd(text);
-        addLog(text, 'player');
 
-        // If contradiction already fired on interim, skip — reset debounce
+        // If contradiction already fired on interim, just reset and stay quiet
         if (contradictionFired) {
+            clearTimeout(contradictionResetTimer); // cancel safety timer — we got here normally
             contradictionFired = false;
             return;
         }
 
-        const lower = text.toLowerCase().trim();
-
-        // ── Wake word: "veritas" spoken alone or at end of sentence ──────
-        // e.g. "veritas", "ask veritas", "what does veritas say"
+        // ── Wake word ─────────────────────────────────────────────────────
+        // "Veritas" spoken alone OR as part of any sentence invokes Veritas
         if (/\bveritas\b/i.test(text)) {
-            if (lastRuling) {
-                // Replay last ruling with dispute flag
-                const topic = resolveContradictionTopic(text) || lastRuling.analysis;
-                triggerContradictionRuling(topic, text);
-            } else {
-                speak("I'm listening. Ask me about a rule, keyword, or card name.");
-                addLog('Veritas: Ready — ask a question.', 'system');
-            }
+            const topic = resolveContradictionTopic(text) || (lastRuling && lastRuling.analysis) || null;
+            triggerContradictionRuling(topic, text);
             return;
         }
 
-        // ── Contradiction check on final result ───────────────────────────
-        // Catches dispute phrases that completed before interim could fire
-        // e.g. fast speakers, or sentences like "that's not true"
+        // ── Contradiction / dispute detection ─────────────────────────────
+        // This is the ONLY thing that fires a response during normal play
         if (checkForContradiction(text)) {
             const topic = resolveContradictionTopic(text);
             triggerContradictionRuling(topic, text);
             return;
         }
 
-        // ── Intent gate ───────────────────────────────────────────────────
-        // Only process if it looks like an intentional question or command
-        // Ignore ambient table talk (short sentences, no question words, no keywords)
-        const hasKeyword = Object.keys(KEYWORDS).some(k => matchKw(k, lower));
-        const isQuestion = /\b(what|how|does|do|can|why|when|explain|tell me|define|compare|difference between)\b/i.test(text);
-        const isCardSearch = /\b(look up|search|find|show me|show card|card called)\b/i.test(text);
-        const hasQuestionMark = text.includes('?');
-        const fillerWords = new Set(['is','it','not','no','yes','i','my','me','we','you','how','what','why','when','does','do','can','will','its','that','this','if','so','ok','um','uh','wait','hey','was','a','an']);
-        const words = lower.split(/\s+/).filter(Boolean);
-        const looksLikeCardName = words.length >= 1 && words.length <= 5 && words.every(w => !fillerWords.has(w)) && !/[?!]/.test(text);
-
-        if (!hasKeyword && !isQuestion && !isCardSearch && !hasQuestionMark && !looksLikeCardName) return;
-
-        const analysis = analyzeInput(text);
-        const ruling = renderRuling(analysis);
-
-        if (ruling) {
-            showRuling(ruling, analysis);
-            const speakText = getSpokenText(analysis);
-            if (speakText) speak(speakText);
-            addLog('Ruling: ' + getRulingLabel(analysis), 'ruling');
-        } else if (isCardSearch || hasQuestionMark || looksLikeCardName) {
-            const cleaned = extractCardName(text);
-            if (cleaned.length > 2) showCardRuling(cleaned);
-        }
+        // Everything else: stay completely silent
+        // The table is playing — Veritas is just listening and building context
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1891,23 +1847,15 @@
     // ═══════════════════════════════════════════════════════════════
     function triggerContradictionRuling(topic, triggerText) {
         playInterruptChime();
+        wakeFlash();
 
         disputeCount++;
-        document.getElementById('dispute-counter').textContent = `Disputes: ${disputeCount}`;
+        const dcEl = document.getElementById('dispute-counter');
+        dcEl.textContent = `${disputeCount} dispute${disputeCount !== 1 ? 's' : ''}`;
+        if (disputeCount > 0) dcEl.classList.add('has-disputes');
         addLog(`⚑ Contradiction detected: "${triggerText.slice(0, 60)}…"`, 'ruling');
 
-        // Show confidence indicator
         const confidence = topic ? 'high' : 'low';
-        const indicator = document.getElementById('confidence-indicator');
-        const levelEl = document.getElementById('confidence-level');
-        if (indicator && levelEl) {
-            levelEl.textContent = confidence;
-            indicator.className = `confidence-indicator show ${confidence}`;
-            clearTimeout(indicator._hideTimer);
-            indicator._hideTimer = setTimeout(() => {
-                indicator.classList.remove('show');
-            }, 4000);
-        }
 
         if (topic) {
             const ruling = renderRuling(topic);
@@ -2061,6 +2009,16 @@
         if (!clean) return;
         const utt = new SpeechSynthesisUtterance(clean);
         utt.rate = 0.95;
+
+        // Mute the mic while Veritas is speaking — prevents TTS output
+        // from feeding back into speech recognition and re-triggering disputes
+        if (recognition) { try { recognition.abort(); } catch(e) {} }
+
+        utt.onend = () => {
+            // Small delay so the mic doesn't catch the tail of the audio
+            setTimeout(() => { if (!isPaused) startListening(); }, 400);
+        };
+
         window.speechSynthesis.speak(utt);
     }
 
@@ -2101,7 +2059,7 @@
         recognition.maxAlternatives = 1;
 
         recognition.onstart = () => {
-            document.getElementById('debug-info').textContent = 'Listening';
+            const dbg = document.getElementById('debug-info'); if(dbg) dbg.textContent = 'Listening';
         };
 
         recognition.onresult = (e) => {
@@ -2126,7 +2084,7 @@
             // not-allowed = mic permission denied — tell the user
             if (e.error === 'not-allowed') {
                 addLog('Microphone permission denied. Allow mic access and reload.', 'system');
-                document.getElementById('debug-info').textContent = 'Mic blocked';
+                const dbg2 = document.getElementById('debug-info'); if(dbg2) dbg2.textContent = 'Mic blocked';
                 return;
             }
             addLog('Mic error: ' + e.error, 'system');
@@ -2137,7 +2095,7 @@
             // We restart immediately with a fresh object rather than calling start()
             // on the dead one — this is the only way to avoid the beep/gap cycle.
             if (isPaused) {
-                document.getElementById('debug-info').textContent = 'Paused';
+                
                 return;
             }
             // Tiny defer so the browser fully tears down before we create the next session
@@ -2157,21 +2115,13 @@
     // ═══════════════════════════════════════════════════════════════
     function togglePause() {
         isPaused = !isPaused;
-        const container = document.getElementById('listening-container');
-        const statusText = document.getElementById('status-text');
-        const statusSubtext = document.getElementById('status-subtext');
+        const lbl = document.getElementById('standby-label');
         if (isPaused) {
-            container.classList.remove('active');
-            statusText.textContent = 'Paused';
-            statusSubtext.textContent = 'Click Pause/Resume to continue';
-            document.getElementById('debug-info').textContent = 'Paused';
-            // Kill current session — onend will fire but isPaused=true so it won't restart
+            if (lbl) lbl.textContent = 'Paused';
+            document.getElementById('debug-info') && (document.getElementById('debug-info').textContent = 'Paused');
             if (recognition) { try { recognition.abort(); } catch(e) {} }
         } else {
-            container.classList.add('active');
-            statusText.textContent = 'Listening…';
-            statusSubtext.textContent = 'Ask about a rule, keyword, or card name';
-            // Start a completely fresh session
+            if (lbl) lbl.textContent = 'Listening';
             startListening();
         }
     }
@@ -2211,21 +2161,26 @@
     }
 
     function testManually() {
-        const tests = [
-            'how does trample work',
-            'does deathtouch work with first strike',
-            'what is the difference between hexproof and shroud',
-            'if i sacrifice a creature does blood artist trigger',
-            'can my creature survive if it has indestructible',
-            'what is the stack',
-            'trample and deathtouch together',
-            'how do i stop an indestructible creature',
-            'does my prowess trigger if i cast an instant',
-            'Lightning Bolt'
+        // Test by simulating a dispute scenario with a known keyword pair
+        // These bypass the silent-only handleFinal and go straight to the ruling
+        const topics = [
+            { type: 'semantic', data: null, _kw: 'trample+deathtouch' },
+            { type: 'keyword', keyword: 'hexproof' },
+            { type: 'keyword', keyword: 'indestructible' },
+            { type: 'keyword', keyword: 'first strike' },
+            { type: 'keyword', keyword: 'commander damage' },
+            { type: 'keyword', keyword: 'deathtouch' },
+            { type: 'keyword', keyword: 'lifelink' },
+            { type: 'keyword', keyword: 'trample' },
         ];
-        const t = tests[Math.floor(Math.random() * tests.length)];
-        addLog(`Test: "${t}"`, 'system');
-        handleFinal(t);
+        const pick = topics[Math.floor(Math.random() * topics.length)];
+        let topic = pick;
+        if (pick._kw) {
+            const [a, b] = pick._kw.split('+');
+            const interaction = getKnownInteraction(a, b);
+            topic = interaction ? { type: 'semantic', data: interaction } : { type: 'keyword', keyword: a };
+        }
+        triggerContradictionRuling(topic, 'test trigger');
     }
 
     function endSession() {
@@ -2234,12 +2189,9 @@
     }
 
     function addLog(msg, type = 'system') {
-        const c = document.getElementById('log-container');
-        const e = document.createElement('div');
-        e.className = `log-entry ${type}`;
-        e.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-        c.appendChild(e);
-        c.scrollTop = c.scrollHeight;
+        // Silent — Veritas does not display a running transcript
+        // Disputes and rulings are shown in the overlay only
+        console.debug('[Veritas]', type, msg);
     }
 
     function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -2247,16 +2199,68 @@
     // ═══════════════════════════════════════════════════════════════
     // PARTICLES & INIT
     // ═══════════════════════════════════════════════════════════════
-    function createParticles() {
-        const c = document.getElementById('particles');
-        for (let i = 0; i < 50; i++) {
-            const p = document.createElement('div');
-            p.className = 'particle';
-            p.style.left = Math.random() * 100 + '%';
-            p.style.animationDelay = Math.random() * 20 + 's';
-            p.style.animationDuration = (15 + Math.random() * 10) + 's';
-            c.appendChild(p);
+    // ═══════════════════════════════════════════════════════════════
+    // AMBIENT CANVAS — slow drifting soft particles in background
+    // Communicates "alive and watching" without being distracting
+    // ═══════════════════════════════════════════════════════════════
+    function initAmbientCanvas() {
+        const canvas = document.getElementById('ambient-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        let W, H, particles;
+
+        function resize() {
+            W = canvas.width  = window.innerWidth;
+            H = canvas.height = window.innerHeight;
         }
+        resize();
+        window.addEventListener('resize', resize);
+
+        // Create subtle floating motes
+        particles = Array.from({length: 60}, () => ({
+            x: Math.random() * W,
+            y: Math.random() * H,
+            r: Math.random() * 1.5 + 0.3,
+            vx: (Math.random() - 0.5) * 0.15,
+            vy: (Math.random() - 0.5) * 0.15,
+            opacity: Math.random() * 0.12 + 0.02,
+            phase: Math.random() * Math.PI * 2,
+            speed: Math.random() * 0.008 + 0.003
+        }));
+
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+            const t = Date.now() / 1000;
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < -5) p.x = W + 5;
+                if (p.x > W + 5) p.x = -5;
+                if (p.y < -5) p.y = H + 5;
+                if (p.y > H + 5) p.y = -5;
+                const alpha = p.opacity * (0.6 + 0.4 * Math.sin(t * p.speed * 60 + p.phase));
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(0,167,181,${alpha})`;
+                ctx.fill();
+            });
+            requestAnimationFrame(draw);
+        }
+        draw();
+    }
+
+    // Brief teal flash when Veritas wakes
+    function wakeFlash() {
+        const el = document.getElementById('wake-flash');
+        if (!el) return;
+        el.classList.remove('fire');
+        // Force reflow so the animation restarts if fired twice quickly
+        void el.offsetWidth;
+        el.classList.add('fire');
+    }
+
+    function createParticles() {
+        // Replaced by initAmbientCanvas — kept for compatibility
     }
 
     document.addEventListener('keydown', e => {
@@ -2266,10 +2270,9 @@
     });
 
     window.addEventListener('load', () => {
-        createParticles();
+        initAmbientCanvas();
         setupSpeechRecognition();
-        addLog('Veritas is listening. Ask about keywords, rules, or card names.', 'system');
-        addLog(`${Object.keys(KEYWORDS).length} keywords loaded.`, 'system');
+        // Veritas starts silently — no log spam on init
 
         setInterval(() => {
             const s = Math.floor((Date.now() - sessionStartTime) / 1000);
