@@ -200,35 +200,270 @@
             animation: wakeFlashAnim 0.4s ease-out forwards;
         }
 
-        /* ═══ RULING OVERLAY ═══ */
+        /* ═══ RULING OVERLAY — full screen character experience ═══ */
         .ruling-overlay {
             position: fixed; inset: 0;
-            background: rgba(0,0,0,0.92);
-            display: none; align-items: center; justify-content: center;
-            z-index: 1000; padding: 20px;
+            background: #07070d;
+            display: none; flex-direction: column;
+            z-index: 1000;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
         .ruling-overlay.show { display: flex; }
-        .ruling-content {
-            background: linear-gradient(160deg, #0e0e1a 0%, #111122 100%);
-            border: 1px solid rgba(0,167,181,0.35);
-            border-radius: 20px; padding: 36px;
-            max-width: 820px; width: 100%;
-            max-height: 90vh; overflow-y: auto;
-            position: relative;
-            box-shadow: 0 0 80px rgba(0,167,181,0.15), 0 40px 80px rgba(0,0,0,0.6);
-            animation: rulingAppear 0.25s cubic-bezier(0.22,1,0.36,1);
-        }
+
         @keyframes rulingAppear {
-            from { opacity: 0; transform: scale(0.96) translateY(16px); }
-            to   { opacity: 1; transform: scale(1) translateY(0); }
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
+
+        /* ── Character stage (top half) ── */
+        .judge-stage {
+            position: relative;
+            width: 100%; min-height: 52vh;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: flex-end;
+            padding-bottom: 0;
+            flex-shrink: 0;
+            animation: rulingAppear 0.4s cubic-bezier(0.22,1,0.36,1);
+        }
+
+        /* Ambient glow behind figure */
+        .judge-stage::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: radial-gradient(ellipse 60% 50% at 50% 80%,
+                rgba(0,167,181,0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        /* The cloaked figure — pure CSS */
+        .judge-figure {
+            position: relative;
+            width: 160px; height: 260px;
+            margin-bottom: 0;
+        }
+
+        /* Hood / head */
+        .judge-head {
+            position: absolute;
+            top: 0; left: 50%; transform: translateX(-50%);
+            width: 62px; height: 70px;
+            background: radial-gradient(ellipse at 50% 40%,
+                rgba(0,167,181,0.07) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50% 50% 40% 40%;
+            border: 1px solid rgba(0,167,181,0.18);
+        }
+        /* Deep shadow where face would be */
+        .judge-head::after {
+            content: '';
+            position: absolute;
+            top: 22px; left: 12px; right: 12px; bottom: 10px;
+            background: rgba(0,0,0,0.85);
+            border-radius: 50%;
+        }
+        /* Faint eye glow */
+        .judge-eyes {
+            position: absolute;
+            top: 34px; left: 50%; transform: translateX(-50%);
+            width: 30px; height: 5px;
+            display: flex; justify-content: space-between;
+            z-index: 2;
+        }
+        .judge-eyes::before,
+        .judge-eyes::after {
+            content: '';
+            width: 7px; height: 3px;
+            border-radius: 50%;
+            background: rgba(0,167,181,0.6);
+            box-shadow: 0 0 8px rgba(0,167,181,0.8);
+            animation: eyeGlow 4s ease-in-out infinite;
+        }
+        @keyframes eyeGlow {
+            0%,100% { opacity: 0.5; }
+            50%      { opacity: 1; }
+        }
+
+        /* Cloak body */
+        .judge-cloak {
+            position: absolute;
+            top: 56px; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(180deg,
+                rgba(10,10,20,0.95) 0%,
+                rgba(5,5,12,0.98) 60%,
+                rgba(0,167,181,0.04) 100%);
+            border-radius: 20px 20px 40% 40%;
+            border: 1px solid rgba(0,167,181,0.12);
+            border-top: none;
+        }
+        /* Cloak fold lines */
+        .judge-cloak::before {
+            content: '';
+            position: absolute;
+            top: 10px; bottom: 20px;
+            left: 50%; transform: translateX(-50%);
+            width: 1px;
+            background: linear-gradient(180deg,
+                rgba(0,167,181,0.1) 0%, transparent 100%);
+        }
+        /* Cloak hem glow */
+        .judge-cloak::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 20%; right: 20%; height: 1px;
+            background: rgba(0,167,181,0.2);
+            border-radius: 50%;
+        }
+
+        /* Speech bubble */
+        .judge-bubble {
+            position: relative;
+            background: rgba(10,12,24,0.97);
+            border: 1px solid rgba(0,167,181,0.3);
+            border-radius: 18px;
+            padding: 22px 28px;
+            margin: 0 24px;
+            max-width: 680px; width: calc(100% - 48px);
+            box-shadow: 0 0 40px rgba(0,167,181,0.08);
+            animation: bubbleIn 0.35s 0.15s cubic-bezier(0.22,1,0.36,1) both;
+        }
+        @keyframes bubbleIn {
+            from { opacity: 0; transform: translateY(12px) scale(0.97); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        /* Bubble tail pointing up to figure */
+        .judge-bubble::before {
+            content: '';
+            position: absolute;
+            top: -10px; left: 50%; transform: translateX(-50%);
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 10px solid rgba(0,167,181,0.3);
+        }
+        .judge-bubble::after {
+            content: '';
+            position: absolute;
+            top: -8px; left: 50%; transform: translateX(-50%);
+            border-left: 9px solid transparent;
+            border-right: 9px solid transparent;
+            border-bottom: 9px solid rgba(10,12,24,0.97);
+        }
+
+        /* Dispute badge inside bubble */
+        .bubble-dispute-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(255,107,107,0.1);
+            border: 1px solid rgba(255,107,107,0.3);
+            color: #ff8080; font-size: 10px; font-weight: 700;
+            letter-spacing: 1.5px; text-transform: uppercase;
+            padding: 3px 10px; border-radius: 20px;
+            margin-bottom: 12px;
+        }
+
+        /* The actual spoken verdict text */
+        .bubble-verdict {
+            font-size: 18px; line-height: 1.65;
+            color: #e8e8f0; font-weight: 400;
+        }
+        .bubble-verdict strong { color: #fff; font-weight: 600; }
+        .bubble-verdict .teal  { color: #4ecdc4; }
+        .bubble-verdict .gold  { color: #ffe66d; }
+        .bubble-verdict .red   { color: #ff8080; }
+
+        /* Scroll hint */
+        .scroll-hint {
+            display: flex; flex-direction: column; align-items: center;
+            gap: 6px; padding: 18px 0 10px;
+            color: rgba(0,167,181,0.3);
+            font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+            animation: hintBob 2s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+        @keyframes hintBob {
+            0%,100% { transform: translateY(0); opacity: 0.4; }
+            50%      { transform: translateY(4px); opacity: 0.7; }
+        }
+        .scroll-hint svg { width: 16px; height: 16px; }
+
+        /* ── Details section (scrolled into) ── */
+        .ruling-details {
+            background: rgba(0,0,0,0.5);
+            border-top: 1px solid rgba(0,167,181,0.1);
+            padding: 32px 24px 100px;
+            flex-shrink: 0;
+            animation: rulingAppear 0.3s 0.3s both;
+        }
+        .ruling-details-inner {
+            max-width: 680px; margin: 0 auto;
+        }
+
+        /* Section headers inside details */
+        .details-section {
+            margin-bottom: 28px;
+        }
+        .details-section-label {
+            font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+            color: rgba(0,167,181,0.4); font-weight: 700;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(0,167,181,0.08);
+        }
+
+        /* Keyword detail card */
+        .kw-detail-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px; padding: 18px 20px;
+            margin-bottom: 12px;
+        }
+        .kw-detail-name {
+            font-size: 13px; font-weight: 700; letter-spacing: 1px;
+            text-transform: uppercase; color: #00a7b5;
+            margin-bottom: 6px;
+        }
+        .kw-detail-rule {
+            font-size: 14px; line-height: 1.7; color: #bbb;
+            margin-bottom: 10px;
+        }
+        .kw-detail-nuances { margin-top: 8px; }
+        .kw-detail-nuance {
+            font-size: 12px; color: #666; line-height: 1.6;
+            padding-left: 12px; border-left: 2px solid rgba(0,167,181,0.2);
+            margin-bottom: 6px;
+        }
+        .kw-detail-ref {
+            font-family: monospace; font-size: 10px;
+            color: rgba(0,167,181,0.3);
+            margin-top: 8px;
+        }
+
+        /* Summary box */
+        .ruling-summary-box {
+            background: rgba(0,167,181,0.04);
+            border: 1px solid rgba(0,167,181,0.15);
+            border-radius: 12px; padding: 18px 20px;
+        }
+        .ruling-summary-box p {
+            font-size: 14px; line-height: 1.75; color: #999;
+        }
+        .ruling-summary-box strong { color: #ccc; }
+
+        /* Close button — floated top right */
         .close-btn {
-            position: absolute; top: 16px; right: 18px;
-            background: none; border: none; color: rgba(255,255,255,0.2);
-            font-size: 20px; cursor: pointer; transition: color 0.2s;
-            line-height: 1;
+            position: fixed; top: 16px; right: 18px;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.3);
+            font-size: 18px; cursor: pointer;
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; z-index: 1010;
+            backdrop-filter: blur(8px);
         }
-        .close-btn:hover { color: #00a7b5; }
+        .close-btn:hover { border-color: #00a7b5; color: #00a7b5; }
+
+        /* Legacy .ruling-content wrapper — kept so showRuling() doesn't break */
+        .ruling-content { width: 100%; }
 
         /* ═══ RULING CONTENT ═══ */
         .ruling-keyword-badge {
@@ -442,12 +677,43 @@
         <button class="ctrl-btn" onclick="testManually()">⚡ Test</button>
     </div>
 
-    <!-- Ruling Overlay -->
-    <div class="ruling-overlay" id="ruling-overlay" onclick="closeRuling(event)">
-        <div class="ruling-content" onclick="event.stopPropagation()">
-            <button class="close-btn" onclick="closeRuling()">✕</button>
-            <div id="ruling-body"></div>
+    <!-- Ruling Overlay — full screen character experience -->
+    <div class="ruling-overlay" id="ruling-overlay">
+
+        <!-- Close button fixed top-right -->
+        <button class="close-btn" onclick="closeRuling()">✕</button>
+
+        <!-- Character stage -->
+        <div class="judge-stage" id="judge-stage">
+            <div class="judge-figure">
+                <div class="judge-head">
+                    <div class="judge-eyes"></div>
+                </div>
+                <div class="judge-cloak"></div>
+            </div>
+
+            <!-- Speech bubble -->
+            <div class="judge-bubble" id="judge-bubble">
+                <div id="bubble-badge"></div>
+                <div class="bubble-verdict" id="bubble-verdict">Analyzing the dispute…</div>
+            </div>
         </div>
+
+        <!-- Scroll hint -->
+        <div class="scroll-hint" id="scroll-hint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+            Scroll for full ruling
+        </div>
+
+        <!-- Details section — keyword rules + summary -->
+        <div class="ruling-details" id="ruling-details">
+            <div class="ruling-details-inner">
+                <div id="ruling-body"></div>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -1968,28 +2234,163 @@
     // ═══════════════════════════════════════════════════════════════
     // RULING OVERLAY
     // ═══════════════════════════════════════════════════════════════
-    function showRuling(html, analysis, disputeOpts) {
-        const overlay = document.getElementById('ruling-overlay');
-        const content = overlay.querySelector('.ruling-content');
-        const body = document.getElementById('ruling-body');
-
-        if (disputeOpts?.isDispute) {
-            const confidenceLabel = { high: 'High confidence dispute', medium: 'Possible dispute', low: 'Dispute signal detected' };
-            const flagHtml = `<div class="dispute-flag">
-                <span class="dispute-flag-icon">⚑</span>
-                <div class="dispute-flag-text">
-                    <strong>${confidenceLabel[disputeOpts.confidence] || 'Dispute Detected'}</strong>
-                    Ruling re-confirmed below — this is the official answer.
-                </div>
-            </div>`;
-            body.innerHTML = flagHtml + html;
-            content.classList.add('dispute-mode');
-        } else {
-            body.innerHTML = html;
-            content.classList.remove('dispute-mode');
+    // ═══════════════════════════════════════════════════════════════
+    // JUDGE SPEECH — build a conversational verdict sentence
+    // Veritas talks like a judge at the table, not a rulebook
+    // ═══════════════════════════════════════════════════════════════
+    function buildVerdict(analysis) {
+        if (!analysis || !analysis.type) {
+            return "Veritas heard a dispute but couldn't identify the rule. Say the keyword or card name being argued.";
         }
 
+        if (analysis.type === 'keyword') {
+            const kw = analysis.keyword;
+            const d = KEYWORDS[kw];
+            if (!d) return `Here's what ${kw} does — check the ruling below.`;
+            const plain = d.plain.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
+            const firstLine = plain.split(/\.\s/)[0];
+            return `Here's what happens: <strong>${kw}</strong> means ${firstLine.toLowerCase().replace(/^[a-z]/, c => c)}. ${buildInstruction(kw, d)}`;
+        }
+
+        if (analysis.type === 'semantic') {
+            const d = analysis.data;
+            if (!d) return "Check the detailed ruling below.";
+            const body = (d.body || '').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
+            const sentence = body.split(/\.\s/)[0];
+            return `Here's what happens: ${sentence}. ${d.verdict ? '<br><br>' + d.verdict.replace(/<[^>]+>/g,'').trim() : ''}`;
+        }
+
+        if (analysis.type === 'multi_keyword') {
+            const kws = analysis.keywords.slice(0,2);
+            const parts = kws.map(kw => {
+                const d = KEYWORDS[kw];
+                if (!d) return kw;
+                const plain = d.plain.replace(/<[^>]+>/g,'').split(/\.\s/)[0].toLowerCase();
+                return `<strong>${kw}</strong> means ${plain}`;
+            });
+            return `Here's what happens: ${parts.join(', and ')}. Both rules apply — see the breakdown below.`;
+        }
+
+        return "Check the detailed ruling below.";
+    }
+
+    // Build a direct "what to do now" instruction based on keyword
+    function buildInstruction(kw, d) {
+        const instructions = {
+            'hexproof':       "The hexproof creature cannot be targeted by opponents. Remove those spells from the stack.",
+            'indestructible': "Destroy effects don't work here. Use exile or -X/-X effects instead.",
+            'deathtouch':     "Any damage from this creature is lethal, regardless of toughness. The blocker dies.",
+            'trample':        "Assign lethal damage to blockers first, then the rest goes through to the player.",
+            'lifelink':       "The damage dealt also heals the controller by the same amount. Update life totals now.",
+            'flying':         "Only creatures with flying or reach can block this. Non-flyers cannot.",
+            'first strike':   "This creature deals combat damage first. If the blocker dies, it deals no damage back.",
+            'double strike':  "This creature deals damage in both the first and regular combat steps.",
+            'vigilance':      "This creature does not tap when it attacks. It stays untapped.",
+            'flash':          "This can be cast any time you could cast an instant, including on opponents turns.",
+            'haste':          "This creature can attack and use tap abilities the turn it enters the battlefield.",
+            'reach':          "This creature can block flying creatures despite not having flying.",
+            'menace':         "This creature requires two or more blockers. One blocker alone is not legal.",
+            'protection':     "That spell or ability is countered — protection prevents damage, targeting, enchanting, blocking, and equipping.",
+            'shroud':         "Neither player can target this creature with spells or abilities.",
+        };
+        return instructions[kw] || "Scroll down for the full official ruling.";
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // BUILD DETAILS HTML — keyword cards + summary shown on scroll
+    // ═══════════════════════════════════════════════════════════════
+    function buildDetailsHtml(analysis, isDispute) {
+        let html = '';
+
+        // Keyword detail cards
+        let kwList = [];
+        if (analysis.type === 'keyword')       kwList = [analysis.keyword];
+        if (analysis.type === 'multi_keyword') kwList = analysis.keywords.slice(0,4);
+        if (analysis.type === 'semantic' && analysis.data?.related) {
+            kwList = (analysis.data.related || []).filter(k => KEYWORDS[k]).slice(0,3);
+        }
+
+        if (kwList.length > 0) {
+            const cards = kwList.map(kw => {
+                const d = KEYWORDS[kw];
+                if (!d) return '';
+                const nuancesHtml = (d.nuances || []).map(n =>
+                    `<div class="kw-detail-nuance">• ${n}</div>`
+                ).join('');
+                return `<div class="kw-detail-card">
+                    <div class="kw-detail-name">${kw}</div>
+                    <div class="kw-detail-rule">${d.plain}</div>
+                    ${nuancesHtml ? `<div class="kw-detail-nuances">${nuancesHtml}</div>` : ''}
+                    <div class="kw-detail-ref">CR ${d.rule} · ${d.category}</div>
+                </div>`;
+            }).join('');
+            html += `<div class="details-section">
+                <div class="details-section-label">Official Keyword Rulings</div>
+                ${cards}
+            </div>`;
+        }
+
+        // Semantic body if available
+        if (analysis.type === 'semantic' && analysis.data?.body) {
+            const body = analysis.data.body;
+            html += `<div class="details-section">
+                <div class="details-section-label">Full Ruling</div>
+                <div class="ruling-summary-box"><p>${body}</p></div>
+            </div>`;
+        }
+
+        // Example if available
+        const kw0 = kwList[0] ? KEYWORDS[kwList[0]] : null;
+        if (kw0?.example) {
+            html += `<div class="details-section">
+                <div class="details-section-label">Example at the Table</div>
+                <div class="ruling-summary-box"><p>${kw0.example}</p></div>
+            </div>`;
+        }
+
+        // Session summary — what was disputed
+        if (isDispute) {
+            html += `<div class="details-section">
+                <div class="details-section-label">Dispute Resolved</div>
+                <div class="ruling-summary-box">
+                    <p>Veritas detected a disagreement and pulled the ruling above. Both players should now agree on the outcome. If the dispute continues, re-read the ruling or consult a paper judge.</p>
+                </div>
+            </div>`;
+        }
+
+        return html || '<div class="details-section"><div class="ruling-summary-box"><p>No additional ruling data found for this topic.</p></div></div>';
+    }
+
+    function showRuling(html, analysis, disputeOpts) {
+        const overlay = document.getElementById('ruling-overlay');
+        const body = document.getElementById('ruling-body');
+        const verdictEl = document.getElementById('bubble-verdict');
+        const badgeEl = document.getElementById('bubble-badge');
+
+        const isDispute = disputeOpts?.isDispute || false;
+
+        // Set dispute badge
+        if (isDispute) {
+            badgeEl.innerHTML = '<div class="bubble-dispute-badge">⚑ Dispute Detected</div>';
+        } else {
+            badgeEl.innerHTML = '';
+        }
+
+        // Build and set the speech bubble verdict
+        const verdictText = buildVerdict(analysis);
+        verdictEl.innerHTML = verdictText;
+
+        // Build details section (scroll-down content)
+        if (analysis && Object.keys(analysis).length) {
+            body.innerHTML = buildDetailsHtml(analysis, isDispute);
+        } else {
+            body.innerHTML = html; // fallback for non-keyword rulings like card lookup
+        }
+
+        // Reset scroll to top
+        overlay.scrollTop = 0;
         overlay.classList.add('show');
+
         if (analysis && Object.keys(analysis).length) lastRuling = { html, analysis };
     }
 
@@ -2001,10 +2402,10 @@
         }
     }
 
-    function closeRuling(event) {
-        if (!event || event.target.id === 'ruling-overlay' || event.target.classList.contains('close-btn')) {
-            document.getElementById('ruling-overlay').classList.remove('show');
-        }
+    function closeRuling() {
+        document.getElementById('ruling-overlay').classList.remove('show');
+        // Reset scroll so next ruling opens at the top
+        document.getElementById('ruling-overlay').scrollTop = 0;
     }
 
     async function showCardRuling(cardName) {
