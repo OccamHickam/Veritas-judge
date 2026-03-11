@@ -5,18 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Veritas — Game Session</title>
     <script>
-    // ═══════════════════════════════════════════════════════════════
-    // KEYWORDS GUARD — inline fallback if keywords.js fails to load
-    // ═══════════════════════════════════════════════════════════════
-    function ensureKeywordsLoaded() {
-        if (window.KEYWORDS && Object.keys(window.KEYWORDS).length > 0) return true;
-        console.warn('[Veritas] keywords.js not loaded — using built-in fallback database.');
-        window.KEYWORDS = KEYWORDS_FALLBACK;
-        return false;
-    }
+    // keywords.js hook — if an external keywords.js is loaded, it sets window.KEYWORDS
+    // before the main script runs. The main script checks for it and falls back to the
+    // built-in KEYWORDS object if it's absent.
     </script>
-    <!-- Load external keyword database if it exists -->
-    <script src="keywords.js" onerror="console.warn('[Veritas] keywords.js not found, using fallback')"></script>
+    <!-- Optional external keyword database. If present, it sets window.KEYWORDS -->
+    <script src="keywords.js" onerror="void 0"></script>
     <style>
         :root {
             --bg: #060609;
@@ -1082,15 +1076,11 @@
     };
 
     // ═══════════════════════════════════════════════════════════════
-    // INITIALIZE KEYWORDS
+    // KEYWORDS — use external keywords.js if loaded, else built-in
     // ═══════════════════════════════════════════════════════════════
-    let KEYWORDS;
-    function initKeywords() {
-        ensureKeywordsLoaded();
-        KEYWORDS = window.KEYWORDS && Object.keys(window.KEYWORDS).length > 0
-            ? window.KEYWORDS
-            : KEYWORDS_FALLBACK;
-    }
+    const KEYWORDS = (window.KEYWORDS && Object.keys(window.KEYWORDS).length > 0)
+        ? window.KEYWORDS
+        : KEYWORDS_FALLBACK;
 
     // ═══════════════════════════════════════════════════════════════
     // KEYWORD MATCH HELPER
@@ -1929,13 +1919,16 @@
             }
         }
 
-        showRuling(`<div>
+        showRulingRaw(`<div>
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+                <div class="bubble-dispute-badge">⚑ Dispute Detected</div>
+            </div>
             <div class="ruling-title" style="margin-top:8px;">What's the dispute about?</div>
             <div class="ruling-answer-body" style="margin-top:14px;font-size:15px;color:#aaa;">
                 Veritas heard a disagreement but couldn't identify the rule.<br><br>
                 Say the keyword or card name being disputed and Veritas will pull the ruling immediately.
             </div>
-        </div>`, {}, { isDispute: true });
+        </div>`, '⚑ Dispute Detected');
         speak('What rule are you disputing?');
     }
 
@@ -1957,6 +1950,21 @@
     // ═══════════════════════════════════════════════════════════════
     // SHOW RULING OVERLAY
     // ═══════════════════════════════════════════════════════════════
+    // Raw display — for panels like keyword reference that supply their own HTML
+    // and don't need the judge bubble or buildDetailsHtml processing
+    function showRulingRaw(html, title) {
+        const overlay = document.getElementById('ruling-overlay');
+        const body = document.getElementById('ruling-body');
+        const verdictEl = document.getElementById('bubble-verdict');
+        const analogyEl = document.getElementById('bubble-analogy');
+        document.getElementById('bubble-badge').innerHTML = '';
+        verdictEl.innerHTML = title || 'Reference';
+        analogyEl.style.display = 'none';
+        body.innerHTML = html;
+        overlay.scrollTop = 0;
+        overlay.classList.add('show');
+    }
+
     function showRuling(html, analysis, disputeOpts) {
         const overlay = document.getElementById('ruling-overlay');
         const body = document.getElementById('ruling-body');
@@ -1977,11 +1985,13 @@
         verdictEl.innerHTML = verdictText;
 
         // Show analogy in bubble if available for single keyword
-        if (analysis?.type === 'keyword' && KEYWORDS[analysis.keyword]?.analogy) {
-            analogyEl.textContent = KEYWORDS[analysis.keyword].analogy;
-            analogyEl.style.display = 'block';
-        } else {
-            analogyEl.style.display = 'none';
+        if (analogyEl) {
+            if (analysis?.type === 'keyword' && KEYWORDS[analysis.keyword]?.analogy) {
+                analogyEl.textContent = KEYWORDS[analysis.keyword].analogy;
+                analogyEl.style.display = 'block';
+            } else {
+                analogyEl.style.display = 'none';
+            }
         }
 
         // Build details section
@@ -2219,7 +2229,7 @@
             </div>`;
         }
         html += '</div>';
-        showRuling(html, {});
+        showRulingRaw(html, 'Keyword Reference');
     }
 
     function testManually() {
@@ -2397,7 +2407,6 @@
     // INIT
     // ═══════════════════════════════════════════════════════════════
     window.addEventListener('load', () => {
-        initKeywords();
         initAmbientCanvas();
 
         setInterval(() => {
