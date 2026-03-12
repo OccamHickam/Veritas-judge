@@ -34,89 +34,7 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* ══════════════════════════════════════════════════════
-           TABLET ACCEPTANCE SCREEN
-        ══════════════════════════════════════════════════════ */
-        #tablet-accept {
-            position: fixed; inset: 0;
-            background: radial-gradient(ellipse at 50% 40%, #0d1220 0%, #060609 70%);
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            z-index: 5000; gap: 0;
-            transition: opacity 0.6s ease;
-        }
-        #tablet-accept.hidden { opacity: 0; pointer-events: none; }
 
-        .accept-seal {
-            position: relative;
-            width: 130px; height: 130px;
-            margin-bottom: 40px;
-        }
-        .accept-ring {
-            position: absolute; inset: 0; border-radius: 50%;
-            border: 1px solid rgba(0,167,181,0.18);
-            animation: orbRing 9s infinite linear;
-        }
-        .accept-ring:nth-child(2) {
-            inset: 14px;
-            border-color: rgba(0,167,181,0.10);
-            animation-duration: 14s; animation-direction: reverse;
-        }
-        .accept-ring:nth-child(3) {
-            inset: 28px;
-            border-color: rgba(0,167,181,0.06);
-            animation-duration: 7s;
-        }
-        .accept-core {
-            position: absolute; inset: 42px; border-radius: 50%;
-            background: radial-gradient(circle at 40% 35%, rgba(0,167,181,0.14) 0%, transparent 100%);
-            border: 1px solid rgba(0,167,181,0.22);
-            animation: orbBreath 5s ease-in-out infinite;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .accept-glyph {
-            font-family: 'Cinzel', serif;
-            font-size: 22px; font-weight: 700;
-            color: rgba(0,167,181,0.6);
-            letter-spacing: 2px;
-        }
-        .accept-wordmark {
-            font-family: 'Cinzel', serif;
-            font-size: 26px; font-weight: 600; letter-spacing: 10px;
-            color: rgba(255,255,255,0.85);
-            margin-bottom: 8px;
-            text-transform: uppercase;
-        }
-        .accept-tagline {
-            font-size: 11px; letter-spacing: 4px; text-transform: uppercase;
-            color: rgba(0,167,181,0.4); margin-bottom: 14px; font-weight: 400;
-        }
-        .accept-desc {
-            font-size: 14px; color: rgba(255,255,255,0.22);
-            margin-bottom: 52px; letter-spacing: 0.3px;
-            max-width: 340px; text-align: center; line-height: 1.8;
-        }
-        .accept-btn {
-            background: transparent;
-            border: 1px solid rgba(0,167,181,0.35);
-            color: rgba(0,167,181,0.8);
-            padding: 15px 52px; border-radius: 40px;
-            font-size: 11px; text-transform: uppercase;
-            letter-spacing: 4px; cursor: pointer;
-            transition: all 0.3s ease;
-            font-family: 'Inter', sans-serif;
-            font-weight: 500;
-        }
-        .accept-btn:hover {
-            background: rgba(0,167,181,0.08);
-            border-color: var(--accent); color: var(--accent);
-            box-shadow: 0 0 30px rgba(0,167,181,0.2), inset 0 0 20px rgba(0,167,181,0.04);
-        }
-        .accept-note {
-            margin-top: 22px;
-            font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
-            color: rgba(255,255,255,0.08);
-        }
 
         /* ══════════════════════════════════════════════════════
            AMBIENT CANVAS
@@ -819,22 +737,7 @@
 </head>
 <body>
 
-<!-- ══ TABLET ACCEPTANCE SCREEN ══ -->
-<div id="tablet-accept">
-    <div class="accept-seal">
-        <div class="accept-ring"></div>
-        <div class="accept-ring"></div>
-        <div class="accept-ring"></div>
-        <div class="accept-core">
-            <span class="accept-glyph">V</span>
-        </div>
-    </div>
-    <div class="accept-wordmark">Veritas</div>
-    <div class="accept-tagline">MTG Rules Assistant</div>
-    <div class="accept-desc">Place this tablet at the center of the table. Veritas listens silently and intervenes when a dispute erupts.</div>
-    <button class="accept-btn" onclick="acceptAndStart()">Begin Session</button>
-    <div class="accept-note">Microphone access required</div>
-</div>
+
 
 <!-- ══ WAKE FLASH ══ -->
 <div id="wake-flash"></div>
@@ -1393,12 +1296,17 @@ function showRuling(bodyHtml, analysis, disputeOpts) {
     const actionEl  = document.getElementById('bubble-action');
     const detailsEl = document.getElementById('ruling-details-inner');
 
-    const isDispute = disputeOpts?.isDispute || false;
+    const isDispute   = disputeOpts?.isDispute   || false;
+    const isCorrection = disputeOpts?.isCorrection || false;
 
-    // ── Dispute badge ──
-    badgeEl.innerHTML = isDispute
-        ? '<div class="dispute-badge">⚑ Dispute Detected</div>'
-        : '';
+    // ── Badge ──
+    if (isDispute) {
+        badgeEl.innerHTML = '<div class="dispute-badge">⚑ Dispute Detected</div>';
+    } else if (isCorrection) {
+        badgeEl.innerHTML = '<div class="dispute-badge" style="background:rgba(255,230,109,0.08);border-color:rgba(255,230,109,0.28);color:rgba(255,230,109,0.8);">⚠ Correction</div>';
+    } else {
+        badgeEl.innerHTML = '';
+    }
 
     // ── Experience level badge ──
     if (analysis && analysis.type === 'keyword') {
@@ -1773,8 +1681,88 @@ function buildSpokenText(analysis) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// INTERIM HANDLER
+// CONVERSATIONAL UNDERSTANDING
+//
+// Veritas listens to EVERYTHING and responds when it actually understands
+// what's being asked or discussed — not just on contradiction triggers.
+//
+// Priority order:
+//  1. Contradiction / dispute detected → interrupt ruling (dispute mode)
+//  2. Direct address ("Veritas, ...") → answer from context
+//  3. Direct question about a keyword/rule → answer it
+//  4. Keyword mentioned in a question-like sentence → answer it
+//  5. Card name question → Scryfall lookup
+//  6. Keyword mentioned in passing → silently buffer, no response
+//  7. Pure chatter with no MTG content → stay silent
 // ═══════════════════════════════════════════════════════════════════════
+
+// ── Question signal patterns ─────────────────────────────────────────
+// These indicate the speaker WANTS an answer, not just making a statement
+const QUESTION_SIGNALS = [
+    /\?$/,                                               // ends with ?
+    /^(what|how|does|do|can|is|are|will|would|when|why|which)\b/i,
+    /\bwhat (does|is|are|happens?)\b/i,
+    /\bhow does\b/i,
+    /\bcan (i|you|it|they|he|she|we)\b/i,
+    /\bdoes (it|that|this|the|a|an)\b/i,
+    /\bis (it|that|this|there)\b/i,
+    /\bdo (i|you|we|they)\b/i,
+    /\bwill (it|that|this)\b/i,
+    /\bwould (it|that|this)\b/i,
+    /\bexplain\b/i,
+    /\btell me\b/i,
+    /\bremind me\b/i,
+    /\bi (don't|dont|do not) (know|understand|get)\b/i,
+    /\bwhat (about|if|happens? (when|if|to))\b/i,
+    /\bwait[,.]? (does|is|can|how|what|so)\b/i,  // "wait, does trample..."
+    /\bhold on[,.]? (does|is|can|how|what)\b/i,
+    /\bso (does|is|can|that means?)\b/i,
+    /\bright\??$/i,                                      // "... right?"
+    /\bcorrect\??$/i,
+    /\bworks? (like|that way|right)\b/i,
+];
+
+// ── Statements that mention a keyword in a DECLARATIVE way ───────────
+// These are claims being made at the table — fire a ruling if contested
+// but DON'T auto-respond to every passing mention
+const DECLARATIVE_CLAIM_PATTERNS = [
+    /\b(it|that|this) (has|gives?|grants?|means?|works?)\b/i,
+    /\b(trample|flying|hexproof|deathtouch|etc) (means?|is|does|lets?|allows?|prevents?|stops?)\b/i,
+    /\byou (can|can't|cannot|could|couldn't) (block|attack|target|cast|use)\b/i,
+    /\b(the creature|my creature|your creature|this creature) (can|can't|cannot|has|doesn't)\b/i,
+];
+
+function isQuestion(text) {
+    return QUESTION_SIGNALS.some(p => p.test(text.trim()));
+}
+
+function isDirectedAtVeritas(text) {
+    return /\bveritas\b/i.test(text);
+}
+
+// ── "Does X work here?" / "Can X block Y?" style sentences ──────────
+// Extract the subject being asked about
+function extractQuestionSubject(text) {
+    const lower = text.toLowerCase();
+
+    // "does [keyword] work with [keyword]"
+    const withMatch = lower.match(/does (.+?) (work|interact|combine|stack|go|trigger) with (.+?)[\?\.]/);
+    if (withMatch) return { a: withMatch[1].trim(), b: withMatch[3].trim(), type: 'interaction' };
+
+    // "can X block Y"
+    const blockMatch = lower.match(/can (.+?) (block|be blocked by) (.+?)[\?\.]/);
+    if (blockMatch) return { a: blockMatch[1].trim(), b: blockMatch[3].trim(), type: 'blocking' };
+
+    // "does X survive/die to Y"
+    const surviveMatch = lower.match(/(does|will) (.+?) (survive|die|get killed|be destroyed by) (.+?)[\?\.]/);
+    if (surviveMatch) return { a: surviveMatch[2].trim(), b: surviveMatch[4].trim(), type: 'survival' };
+
+    return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// INTERIM HANDLER — fast path for contradictions only
+// ─────────────────────────────────────────────────────────────────────
 function handleInterim(text) {
     if (isPaused || contradictionFired || isSpeaking) return;
     if (!checkForContradiction(text)) return;
@@ -1785,38 +1773,229 @@ function handleInterim(text) {
     triggerContradictionRuling(topic, text);
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// FINAL HANDLER
-// ═══════════════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────────
+// FINAL HANDLER — full conversational understanding
+// ─────────────────────────────────────────────────────────────────────
 function handleFinal(text) {
     if (isPaused || isSpeaking) return;
+
+    // Always buffer for context tracking
     bufferAdd(text);
+
+    // ── 1. Contradiction already fired on interim → reset and skip ──
     if (contradictionFired) {
         clearTimeout(contradictionResetTimer);
         contradictionFired = false;
         return;
     }
-    if (/\bveritas\b/i.test(text)) {
-        const topic = resolveContradictionTopic(text) || (lastRuling?.analysis) || null;
-        triggerContradictionRuling(topic, text);
-        return;
-    }
+
+    const lower = text.toLowerCase().trim();
+
+    // ── 2. Contradiction / dispute detected ──
     if (checkForContradiction(text)) {
         const topic = resolveContradictionTopic(text);
         triggerContradictionRuling(topic, text);
+        return;
     }
-    // Otherwise: stay silent, listen, build context
+
+    // ── 3. Directly addressed ("Veritas, how does trample work?") ──
+    if (isDirectedAtVeritas(text)) {
+        // Strip the wake word and treat the rest as the question
+        const stripped = text.replace(/\bveritas[,.]?\s*/gi, '').trim();
+        const topic = stripped.length > 2
+            ? resolveQuestion(stripped)
+            : resolveContradictionTopic(text) || lastRuling?.analysis || null;
+        if (topic) {
+            triggerDirectRuling(topic, text);
+        } else {
+            triggerDirectRuling(null, text);
+        }
+        return;
+    }
+
+    // ── 4. Direct question containing keywords ──
+    if (isQuestion(text)) {
+        const topic = resolveQuestion(text);
+        if (topic) {
+            triggerDirectRuling(topic, text);
+            return;
+        }
+
+        // Question but no keyword found — maybe a card name question
+        // e.g. "what does Snapcaster Mage do?"
+        const cardMatch = text.match(
+            /(?:what does|how does|what is|look up|search for|tell me about|what about)\s+([A-Z][a-zA-Z\s',-]{2,40}?)(?:\s+do|\s+work|\s+mean|\?|$)/i
+        );
+        if (cardMatch) {
+            const possibleCard = cardMatch[1].trim();
+            // Only do card lookup if it doesn't match a known keyword
+            const isKnownKw = Object.keys(window.KEYWORDS).some(k => matchKw(k, possibleCard.toLowerCase()));
+            if (!isKnownKw && possibleCard.length > 3) {
+                showCardRuling(possibleCard);
+                return;
+            }
+        }
+
+        // Generic question with no target — check buffer for context
+        const recentKws = recentKeywordsFromBuffer(4);
+        if (recentKws.length > 0) {
+            const ctx = detectContext(lower);
+            const topic = recentKws.length >= 2
+                ? (getKnownInteraction(recentKws[0], recentKws[1]) || { type: 'multi_keyword', keywords: recentKws })
+                : { type: 'keyword', keyword: recentKws[0], context: ctx };
+            triggerDirectRuling(topic, text);
+        }
+        return;
+    }
+
+    // ── 5. Non-question but contains keyword + context that suggests
+    //       someone is explaining a rule (declarative claim) ──
+    //       e.g. "trample means all damage goes through"
+    //       These are table discussions worth tracking but NOT answering
+    //       unless it looks like a claim being made confidently about the rule
+    const foundKws = Object.keys(window.KEYWORDS)
+        .filter(k => matchKw(k, lower))
+        .sort((a, b) => b.length - a.length);
+
+    if (foundKws.length > 0 && DECLARATIVE_CLAIM_PATTERNS.some(p => p.test(text))) {
+        // Someone is making a declarative claim about a rule.
+        // Buffer it — if it's wrong someone will contradict it and Veritas fires.
+        // But if they say something factually wrong AND phrased as a rule,
+        // check if what they said contradicts the actual ruling.
+        const kw = foundKws[0];
+        const d = window.KEYWORDS[kw];
+        if (d) {
+            const claimedWrong = detectIncorrectClaim(text, kw, d);
+            if (claimedWrong) {
+                // Proactively correct — someone just stated the rule wrong
+                triggerDirectRuling({ type: 'keyword', keyword: kw, context: detectContext(lower) }, text, true);
+            }
+        }
+        // Otherwise: buffer silently — let the conversation continue
+    }
+
+    // ── 6. Everything else → stay silent, keep building context ──
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// RESOLVE QUESTION — turn a sentence into an analysis object
+// ─────────────────────────────────────────────────────────────────────
+function resolveQuestion(text) {
+    const lower = text.toLowerCase();
+    const ctx = detectContext(lower);
+
+    // Find all matching keywords, longest first
+    const foundKws = Object.keys(window.KEYWORDS)
+        .filter(k => matchKw(k, lower))
+        .sort((a, b) => b.length - a.length);
+
+    if (foundKws.length >= 2) {
+        const interaction = getKnownInteraction(foundKws[0], foundKws[1]);
+        if (interaction) return interaction;
+        return { type: 'multi_keyword', keywords: foundKws };
+    }
+
+    if (foundKws.length === 1) {
+        return { type: 'keyword', keyword: foundKws[0], context: ctx };
+    }
+
+    return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// DETECT INCORRECT CLAIM
+// Basic heuristic: does the sentence say something that contradicts
+// the most common mistake for that keyword?
+// ─────────────────────────────────────────────────────────────────────
+function detectIncorrectClaim(text, kw, d) {
+    const lower = text.toLowerCase();
+
+    // Specific known-wrong claim patterns per keyword
+    const wrongClaims = {
+        'trample': [
+            /all (the )?damage goes? (through|to (the )?player)/i,   // wrong: must still assign lethal
+            /trample (means?|lets?) (all|every)/i,
+        ],
+        'hexproof': [
+            /hexproof (means?|makes?) (it )?untargetable/i,          // partly wrong — own spells still work
+            /nobody can target/i,                                      // wrong — YOU can still target
+        ],
+        'indestructible': [
+            /can'?t be (removed|killed|exiled|destroyed by anything)/i, // wrong — exile still works
+            /nothing can (kill|destroy|remove) it/i,
+        ],
+        'first strike': [
+            /deals? damage twice/i,                                    // wrong — that's double strike
+            /attacks? twice/i,
+        ],
+        'deathtouch': [
+            /kills? (the )?player/i,                                   // wrong — only creatures
+            /any damage (to|kills?) (the )?player/i,
+        ],
+        'lifelink': [
+            /triggers? (separately|twice|again)/i,                    // wrong — multiple instances don't stack
+        ],
+        'flying': [
+            /nothing can block (it|flying)/i,                          // wrong — reach blocks flying
+        ],
+    };
+
+    const patterns = wrongClaims[kw];
+    if (!patterns) return false;
+    return patterns.some(p => p.test(lower));
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// TRIGGER DIRECT RULING — non-dispute answer
+// Softer than a contradiction ruling — no chime, no flash, just answers
+// ─────────────────────────────────────────────────────────────────────
+function triggerDirectRuling(topic, originalText, isCorrection) {
+    if (rulingCooldown) return;
+    rulingCooldown = true;
+    clearTimeout(rulingCooldownTimer);
+    rulingCooldownTimer = setTimeout(() => { rulingCooldown = false; }, 2500);
+
+    if (isCorrection) {
+        // Gentle chime — softer than dispute
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = 'sine'; osc.frequency.value = 660;
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.18, audioCtx.currentTime + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.22);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.22);
+        } catch(e) {}
+    }
+
+    if (!topic) {
+        // No keyword found but was addressed — respond generically
+        document.getElementById('bubble-badge').innerHTML = '';
+        document.getElementById('bubble-level').innerHTML = '';
+        document.getElementById('bubble-verdict').innerHTML = "I heard you — could you name the specific keyword or card you're asking about?";
+        document.getElementById('bubble-analogy').innerHTML = '';
+        document.getElementById('bubble-action').innerHTML = '';
+        document.getElementById('ruling-details-inner').innerHTML = `<div class="detail-prose" style="color:rgba(255,255,255,0.25);">
+            Say a keyword name (like "trample", "hexproof", "deathtouch") or a card name and Veritas will pull the ruling.
+        </div>`;
+        document.getElementById('ruling-overlay').scrollTop = 0;
+        document.getElementById('ruling-overlay').classList.add('show');
+        speak("Could you name the specific keyword or card?");
+        return;
+    }
+
+    const html = renderRuling(topic);
+    if (html) {
+        showRuling(html, topic, { isDispute: false, isCorrection });
+        const spoken = buildSpokenText(topic);
+        if (spoken) speak(spoken);
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
 // SPEECH RECOGNITION
 // ═══════════════════════════════════════════════════════════════════════
-function acceptAndStart() {
-    const el = document.getElementById('tablet-accept');
-    if (el) el.classList.add('hidden');
-    setupSpeechRecognition();
-}
-
 function setupSpeechRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
@@ -1904,25 +2083,38 @@ function setOrbState(state) {
 }
 
 function showMicDenied() {
-    const el = document.getElementById('tablet-accept');
-    if (!el) return;
-    el.classList.remove('hidden');
-    el.innerHTML = `
-        <div class="accept-seal" style="margin-bottom:30px;">
-            <div class="accept-ring" style="border-color:rgba(255,107,107,0.25)"></div>
-            <div class="accept-ring" style="border-color:rgba(255,107,107,0.15)"></div>
-            <div class="accept-core" style="border-color:rgba(255,107,107,0.25);">
-                <span class="accept-glyph" style="color:rgba(255,107,107,0.6);">!</span>
-            </div>
+    // Inject a mic-blocked overlay directly into the standby screen
+    const existing = document.getElementById('mic-denied-overlay');
+    if (existing) return;
+    const div = document.createElement('div');
+    div.id = 'mic-denied-overlay';
+    div.style.cssText = `
+        position:fixed;inset:0;z-index:5000;
+        background:rgba(6,6,9,0.97);
+        display:flex;flex-direction:column;
+        align-items:center;justify-content:center;gap:0;
+    `;
+    div.innerHTML = `
+        <div style="font-family:'Cinzel',serif;font-size:22px;font-weight:600;
+            letter-spacing:8px;color:rgba(255,107,107,0.7);margin-bottom:14px;">
+            Mic Blocked
         </div>
-        <div class="accept-wordmark" style="color:rgba(255,107,107,0.7);">Mic Blocked</div>
-        <div class="accept-desc">
-            Veritas needs microphone access.<br><br>
+        <div style="font-size:13px;color:rgba(255,255,255,0.2);max-width:320px;
+            text-align:center;line-height:1.8;margin-bottom:36px;">
+            Veritas needs microphone access to listen for disputes.<br><br>
             1. Click the lock icon in the address bar<br>
             2. Set Microphone to <strong style="color:#dde;">Allow</strong><br>
             3. Reload the page
         </div>
-        <button class="accept-btn" style="border-color:rgba(255,107,107,0.35);color:rgba(255,107,107,0.75);" onclick="location.reload()">Reload Page</button>`;
+        <button onclick="location.reload()" style="
+            background:transparent;
+            border:1px solid rgba(255,107,107,0.35);color:rgba(255,107,107,0.7);
+            padding:13px 44px;border-radius:40px;font-size:11px;
+            text-transform:uppercase;letter-spacing:3px;cursor:pointer;
+            font-family:'Inter',sans-serif;">
+            Reload Page
+        </button>`;
+    document.body.appendChild(div);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -2133,6 +2325,7 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════════════════════════════════
 window.addEventListener('load', () => {
     initAmbientCanvas();
+    setupSpeechRecognition();
 
     // Session timer
     setInterval(() => {
