@@ -1507,10 +1507,10 @@ function checkForContradiction(text) {
 function resolveContradictionTopic(text) {
     const lower = text.toLowerCase();
 
-    // Keywords in current sentence
+    // 1. Keywords explicitly named in this sentence — highest confidence
     const inSentence = Object.keys(window.KEYWORDS)
         .filter(k => matchKw(k, lower))
-        .sort((a,b) => b.length - a.length);
+        .sort((a, b) => b.length - a.length);
 
     if (inSentence.length >= 2) {
         const interaction = getKnownInteraction(inSentence[0], inSentence[1]);
@@ -1518,22 +1518,15 @@ function resolveContradictionTopic(text) {
         return { type: 'multi_keyword', keywords: inSentence };
     }
     if (inSentence.length === 1) {
-        const ctx = detectContext(lower);
-        return { type: 'keyword', keyword: inSentence[0], context: ctx };
+        return { type: 'keyword', keyword: inSentence[0], context: detectContext(lower) };
     }
 
-    // Scan buffer
-    const recentKws = recentKeywordsFromBuffer(6);
-    if (recentKws.length >= 2) {
-        const interaction = getKnownInteraction(recentKws[0], recentKws[1]);
-        if (interaction) return interaction;
-        return { type: 'multi_keyword', keywords: recentKws };
-    }
-    if (recentKws.length === 1) {
-        return { type: 'keyword', keyword: recentKws[0], context: null };
-    }
+    // 2. Look only at the single most recent utterance before this one
+    //    (i.e. what was JUST being discussed, not the whole session history)
+    const immediate = getImmediateContextKeyword();
+    if (immediate) return immediate;
 
-    // Last ruling
+    // 3. Last ruling shown — but only if it was a keyword/semantic, not a card
     if (lastRuling?.analysis?.type === 'keyword') return lastRuling.analysis;
     if (lastRuling?.analysis?.type === 'semantic') return lastRuling.analysis;
     if (lastRuling?.analysis?.type === 'multi_keyword') return lastRuling.analysis;
@@ -1565,6 +1558,45 @@ function recentKeywordsFromBuffer(lookback) {
         }
     }
     return kws;
+}
+
+// Returns true if the sentence is a pronoun-only reference with no named subject
+// e.g. "can it target?", "does that work?", "is it blocked?"
+// These need context from the immediately prior utterance to make sense
+function isPronounReference(text) {
+    const lower = text.toLowerCase().trim();
+    // Must contain a pronoun standing in for a subject AND no keyword of its own
+    const pronounPatterns = [
+        /^(can|does|is|will|would|could) (it|that|this)\b/i,
+        /\b(it|that|this) (work|trigger|apply|count|stack|matter|still)\b/i,
+        /^(what does|how does) (it|that|this)\b/i,
+        /\b(it|that|this) (can'?t?|doesn'?t?|won'?t?|isn'?t?)\b/i,
+        /^so (it|that|this)\b/i,
+        /\bright\?$/i,
+        /\bcorrect\?$/i,
+    ];
+    const hasPronoun = pronounPatterns.some(p => p.test(lower));
+    if (!hasPronoun) return false;
+    // Confirm there's no explicit keyword in this sentence
+    const hasOwnKw = Object.keys(window.KEYWORDS).some(k => matchKw(k, lower));
+    return !hasOwnKw;
+}
+
+// Look ONLY at the single utterance immediately before the current one
+// Returns an analysis object if that utterance contained keywords, else null
+function getImmediateContextKeyword() {
+    // conversationBuffer[-1] is the one just added (current), [-2] is the prior
+    if (conversationBuffer.length < 2) return null;
+    const prior = conversationBuffer[conversationBuffer.length - 2];
+    if (!prior || prior.keywords.length === 0) return null;
+
+    const kws = prior.keywords;
+    if (kws.length >= 2) {
+        const interaction = getKnownInteraction(kws[0], kws[1]);
+        if (interaction) return interaction;
+        return { type: 'multi_keyword', keywords: kws };
+    }
+    return { type: 'keyword', keyword: kws[0], context: detectContext(prior.lower) };
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1821,14 +1853,25 @@ function handleFinal(text) {
             return;
         }
 
-        // Question but no keyword found — maybe a card name question
-        // e.g. "what does Snapcaster Mage do?"
+        // Question but no keyword found in THIS sentence.
+        // Only fall back to context if the sentence is clearly a pronoun reference
+        // like "can it target?" / "does that work?" / "what does it do?"
+        // — meaning "it/that/this" is referring to whatever was JUST discussed.
+        // We only look at the single most recent utterance, not a wide buffer.
+        if (isPronounReference(text)) {
+            const immediate = getImmediateContextKeyword();
+            if (immediate) {
+                triggerDirectRuling(immediate, text);
+                return;
+            }
+        }
+
+        // Card name question — e.g. "what does Snapcaster Mage do?"
         const cardMatch = text.match(
             /(?:what does|how does|what is|look up|search for|tell me about|what about)\s+([A-Z][a-zA-Z\s',-]{2,40}?)(?:\s+do|\s+work|\s+mean|\?|$)/i
         );
         if (cardMatch) {
             const possibleCard = cardMatch[1].trim();
-            // Only do card lookup if it doesn't match a known keyword
             const isKnownKw = Object.keys(window.KEYWORDS).some(k => matchKw(k, possibleCard.toLowerCase()));
             if (!isKnownKw && possibleCard.length > 3) {
                 showCardRuling(possibleCard);
@@ -1836,15 +1879,8 @@ function handleFinal(text) {
             }
         }
 
-        // Generic question with no target — check buffer for context
-        const recentKws = recentKeywordsFromBuffer(4);
-        if (recentKws.length > 0) {
-            const ctx = detectContext(lower);
-            const topic = recentKws.length >= 2
-                ? (getKnownInteraction(recentKws[0], recentKws[1]) || { type: 'multi_keyword', keywords: recentKws })
-                : { type: 'keyword', keyword: recentKws[0], context: ctx };
-            triggerDirectRuling(topic, text);
-        }
+        // Question with no keyword and no pronoun reference — stay silent.
+        // Do NOT reach into the buffer and guess. That's what caused the wrong answer.
         return;
     }
 
