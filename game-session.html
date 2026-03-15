@@ -1507,7 +1507,7 @@ function checkForContradiction(text) {
 function resolveContradictionTopic(text) {
     const lower = text.toLowerCase();
 
-    // 1. Keywords explicitly named in this sentence — highest confidence
+    // 1. Direct keyword match in this sentence
     const inSentence = Object.keys(window.KEYWORDS)
         .filter(k => matchKw(k, lower))
         .sort((a, b) => b.length - a.length);
@@ -1521,12 +1521,22 @@ function resolveContradictionTopic(text) {
         return { type: 'keyword', keyword: inSentence[0], context: detectContext(lower) };
     }
 
-    // 2. Look only at the single most recent utterance before this one
-    //    (i.e. what was JUST being discussed, not the whole session history)
+    // 2. Concept inference — "casting on it", "targeting", "can't block" etc.
+    const inferred = inferKeywordsFromConcepts(lower);
+    if (inferred.length >= 2) {
+        const interaction = getKnownInteraction(inferred[0], inferred[1]);
+        if (interaction) return interaction;
+        return { type: 'multi_keyword', keywords: inferred };
+    }
+    if (inferred.length === 1) {
+        return { type: 'keyword', keyword: inferred[0], context: detectContext(lower) };
+    }
+
+    // 3. Immediate prior utterance only
     const immediate = getImmediateContextKeyword();
     if (immediate) return immediate;
 
-    // 3. Last ruling shown — but only if it was a keyword/semantic, not a card
+    // 4. Last ruling shown
     if (lastRuling?.analysis?.type === 'keyword') return lastRuling.analysis;
     if (lastRuling?.analysis?.type === 'semantic') return lastRuling.analysis;
     if (lastRuling?.analysis?.type === 'multi_keyword') return lastRuling.analysis;
@@ -1639,14 +1649,104 @@ function playInterruptChime() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// WAKE FLASH
+// CONCEPT → KEYWORD MAP
+// Natural language concepts that don't use the exact keyword name
+// but clearly refer to one. "targeting" → hexproof/shroud/protection, etc.
 // ═══════════════════════════════════════════════════════════════════════
-function wakeFlash() {
-    const el = document.getElementById('wake-flash');
-    if (!el) return;
-    el.classList.remove('fire');
-    void el.offsetWidth;
-    el.classList.add('fire');
+const CONCEPT_MAP = [
+    // Targeting / can't be targeted
+    { patterns: [/\b(target(ing)?|cast(ing)? (on|at)|aim(ing)? at|point(ing)? at)\b/i,
+                 /\bcan'?t be targeted\b/i, /\buntargetable\b/i],
+      keywords: ['hexproof', 'shroud', 'ward', 'protection'] },
+
+    // Blocking / can't block / can't be blocked
+    { patterns: [/\b(block(ing|ed|s)?|can'?t block|unblockable)\b/i],
+      keywords: ['flying', 'menace', 'trample', 'reach', 'shadow', 'fear', 'intimidate', 'skulk'] },
+
+    // Dying / death triggers
+    { patterns: [/\b(dies?|dying|died|death trigger|goes? to (the )?graveyard|killed)\b/i],
+      keywords: ['deathtouch', 'indestructible', 'destroy', 'sacrifice', 'exile'] },
+
+    // Can't die / can't be destroyed
+    { patterns: [/\b(can'?t (die|be killed|be destroyed)|won'?t die|survives?)\b/i],
+      keywords: ['indestructible', 'regenerate', 'protection'] },
+
+    // Damage / dealing damage
+    { patterns: [/\b(deal(s|ing)? damage|takes? damage|combat damage|dmg)\b/i],
+      keywords: ['deathtouch', 'lifelink', 'trample', 'first strike', 'double strike'] },
+
+    // Attacking
+    { patterns: [/\b(attack(s|ing|ed)?|swings?|swinging)\b/i],
+      keywords: ['haste', 'vigilance', 'trample', 'flying', 'menace'] },
+
+    // Countering spells
+    { patterns: [/\b(counter(spell|ed|s)?|can'?t be countered|uncounterable)\b/i],
+      keywords: ['counter', 'hexproof'] },
+
+    // Life gain
+    { patterns: [/\b(gain(s|ing)? life|life ?link|heal(s|ing)?)\b/i],
+      keywords: ['lifelink', 'double strike'] },
+
+    // Poison / infect
+    { patterns: [/\b(poison|poison counter|infect)\b/i],
+      keywords: ['infect', 'wither', 'proliferate'] },
+
+    // Exile / remove from game
+    { patterns: [/\b(exil(e|ed|ing)|removed? from (the )?game|blink(ed)?|flicker(ed)?)\b/i],
+      keywords: ['exile', 'indestructible', 'phasing'] },
+
+    // Sacrifice
+    { patterns: [/\b(sacrific(e|ed|ing)|sac)\b/i],
+      keywords: ['sacrifice', 'indestructible', 'exploit'] },
+
+    // Stack / priority / responding
+    { patterns: [/\b(stack|in response|priority|resolv(e|es|ing))\b/i],
+      keywords: ['flash', 'counter', 'ward'] },
+
+    // Commander specific
+    { patterns: [/\b(commander (damage|tax)|command zone|21 damage)\b/i],
+      keywords: ['commander damage', 'commander tax', 'command zone'] },
+];
+
+// Given text with no direct keyword match, infer keywords from concepts
+function inferKeywordsFromConcepts(text) {
+    const lower = text.toLowerCase();
+    const found = [];
+    const seen = new Set();
+    for (const entry of CONCEPT_MAP) {
+        if (entry.patterns.some(p => p.test(lower))) {
+            for (const kw of entry.keywords) {
+                if (!seen.has(kw) && window.KEYWORDS[kw]) {
+                    seen.add(kw);
+                    found.push(kw);
+                }
+            }
+        }
+    }
+    return found;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// WAITING-FOR-CLARIFICATION STATE
+// When Veritas shows the "what rule is being disputed?" prompt,
+// it enters this mode so the NEXT utterance is treated as the answer
+// regardless of whether it looks like a question or contradiction.
+// ═══════════════════════════════════════════════════════════════════════
+let waitingForClarification = false;
+let clarificationTimer = null;
+
+function enterClarificationMode() {
+    waitingForClarification = true;
+    // Auto-exit after 12s if nobody answers
+    clearTimeout(clarificationTimer);
+    clarificationTimer = setTimeout(() => {
+        waitingForClarification = false;
+    }, 12000);
+}
+
+function exitClarificationMode() {
+    waitingForClarification = false;
+    clearTimeout(clarificationTimer);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1684,18 +1784,20 @@ function triggerContradictionRuling(topic, triggerText) {
         }
     }
 
-    // Fallback — prompt
+    // No topic found — show prompt and enter clarification mode
+    // so the next utterance is treated as the answer
     document.getElementById('bubble-badge').innerHTML = '<div class="dispute-badge">⚑ Dispute Detected</div>';
     document.getElementById('bubble-level').innerHTML = '';
-    document.getElementById('bubble-verdict').innerHTML = "Veritas heard a disagreement — say the keyword or card name being disputed.";
+    document.getElementById('bubble-verdict').innerHTML = "Got it — what's the rule being disputed? Say the keyword or describe what happened.";
     document.getElementById('bubble-analogy').innerHTML = '';
     document.getElementById('bubble-action').innerHTML = '';
-    document.getElementById('ruling-details-inner').innerHTML = `<div class="detail-prose" style="color:rgba(255,255,255,0.25);">
-        No keyword identified in the recent conversation. Say the rule or card name clearly and Veritas will pull the ruling.
+    document.getElementById('ruling-details-inner').innerHTML = `<div class="detail-prose" style="color:rgba(255,255,255,0.3);padding:20px 0;">
+        Listening for the rule… say something like <em>"hexproof"</em>, <em>"trample and deathtouch"</em>, or describe the situation.
     </div>`;
     document.getElementById('ruling-overlay').scrollTop = 0;
     document.getElementById('ruling-overlay').classList.add('show');
-    speak('What rule is being disputed?');
+    speak('What is the rule being disputed?');
+    enterClarificationMode();
 }
 
 function buildSpokenText(analysis) {
@@ -1713,20 +1815,203 @@ function buildSpokenText(analysis) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// CONVERSATIONAL UNDERSTANDING
+// CLAUDE API — UNDERSTANDING ENGINE
 //
-// Veritas listens to EVERYTHING and responds when it actually understands
-// what's being asked or discussed — not just on contradiction triggers.
+// Every completed utterance is sent to Claude with the last 5 lines of
+// conversation as context. Claude reads the actual meaning and returns:
+// {
+//   "action": "dispute" | "correct" | "question" | "ignore",
+//   "keyword": "hexproof" | null,
+//   "keywords": ["hexproof","ward"] | null,   // for multi-keyword
+//   "claim_correct": true | false | null,
+//   "correction": "short plain-English note on what was wrong" | null,
+//   "confidence": "high" | "low"
+// }
 //
-// Priority order:
-//  1. Contradiction / dispute detected → interrupt ruling (dispute mode)
-//  2. Direct address ("Veritas, ...") → answer from context
-//  3. Direct question about a keyword/rule → answer it
-//  4. Keyword mentioned in a question-like sentence → answer it
-//  5. Card name question → Scryfall lookup
-//  6. Keyword mentioned in passing → silently buffer, no response
-//  7. Pure chatter with no MTG content → stay silent
+// "dispute"  — someone is arguing about a rule, fire the interrupt ruling
+// "correct"  — someone stated a rule wrong, fire a soft correction
+// "question" — someone asked a genuine question, answer it quietly
+// "ignore"   — normal table talk, no MTG rule content worth acting on
 // ═══════════════════════════════════════════════════════════════════════
+
+const CLAUDE_SYSTEM_PROMPT = `You are the understanding engine for Veritas, an MTG rules assistant that silently monitors a game table.
+
+Your job: read the conversation transcript and decide if Veritas should act.
+
+MTG keywords to recognize (not exhaustive): flying, reach, trample, deathtouch, first strike, double strike, lifelink, hexproof, shroud, ward, protection, indestructible, regenerate, vigilance, haste, menace, flash, defender, sacrifice, exile, destroy, counter, mill, scry, surveil, prowess, equip, enchant, commander damage, commander tax, infect, wither, persist, undying, annihilator, phasing, convoke, delve, emerge, affinity, cycling, kicker, overload, flanking, rampage, bushido, exert, enrage, riot, adapt, evolve, mentor, afflict, myriad, encore, exploit, cipher, banding, horsemanship, shadow, fear, intimidate, skulk.
+
+Also recognize concepts even without exact keyword names:
+- "can't be targeted / cast on / aimed at" → hexproof or shroud or ward or protection
+- "blocks flying / stops fliers" → reach
+- "damage goes through / tramples over" → trample
+- "any damage kills it / 1 damage kills" → deathtouch
+- "can't die / survives everything" → indestructible
+- "gains life when it hits" → lifelink
+- "attacks right away / attacks immediately" → haste
+- "doesn't tap to attack" → vigilance
+- "needs two blockers" → menace
+- "poison counters / infect damage" → infect
+
+Respond ONLY with a single JSON object, no markdown, no explanation:
+{
+  "action": "dispute" | "correct" | "question" | "ignore",
+  "keyword": string | null,
+  "keywords": [string, string] | null,
+  "claim_correct": true | false | null,
+  "correction": string | null,
+  "confidence": "high" | "low"
+}
+
+Rules:
+- "dispute": players are arguing about whether a rule applies — someone said it does, someone said it doesn't
+- "correct": someone confidently stated a rule but got it wrong (e.g. "hexproof stops all spells" is wrong — it only stops opponents)
+- "question": someone asked a genuine question about a rule or card
+- "ignore": normal game talk, no rule claim or dispute
+- keyword: the single most relevant MTG keyword (lowercase, exact name from the list above)
+- keywords: only if TWO distinct keywords are both relevant (e.g. trample + deathtouch interaction)
+- claim_correct: null unless action is "correct" — was the stated rule actually right?
+- correction: only if claim_correct is false — one sentence on what the correct rule is
+- confidence: "low" if the conversation is ambiguous or you're unsure`;
+
+// Keep a rolling transcript for context — last 6 utterances with speaker labels
+const transcriptWindow = [];
+const TRANSCRIPT_SIZE = 6;
+
+function transcriptAdd(text) {
+    transcriptWindow.push(text);
+    if (transcriptWindow.length > TRANSCRIPT_SIZE) transcriptWindow.shift();
+}
+
+function buildTranscript() {
+    return transcriptWindow
+        .map((t, i) => `[${i + 1}] ${t}`)
+        .join('\n');
+}
+
+// Pending API call — only one in flight at a time
+let apiCallInFlight = false;
+
+async function askClaude(currentUtterance) {
+    if (apiCallInFlight) return null;
+    apiCallInFlight = true;
+
+    const transcript = buildTranscript();
+    const userMessage = `Conversation so far:\n${transcript}\n\nLatest utterance: "${currentUtterance}"\n\nWhat should Veritas do?`;
+
+    try {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: 'claude-sonnet-4-20250514',
+                max_tokens: 200,
+                system: CLAUDE_SYSTEM_PROMPT,
+                messages: [{ role: 'user', content: userMessage }]
+            })
+        });
+
+        if (!response.ok) return null;
+        const data = await response.json();
+        const raw = data?.content?.[0]?.text?.trim();
+        if (!raw) return null;
+
+        // Strip any accidental markdown fences
+        const clean = raw.replace(/^```json|^```|```$/gm, '').trim();
+        return JSON.parse(clean);
+    } catch (e) {
+        return null;
+    } finally {
+        apiCallInFlight = false;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// ACT ON CLAUDE'S DECISION
+// ─────────────────────────────────────────────────────────────────────
+function actOnClaudeResponse(result, originalText) {
+    if (!result || result.confidence === 'low' && result.action === 'ignore') return;
+    if (result.action === 'ignore') return;
+
+    // Build the topic analysis object from what Claude identified
+    const topic = buildTopicFromClaudeResult(result);
+
+    if (result.action === 'dispute') {
+        if (rulingCooldown) return;
+        rulingCooldown = true;
+        clearTimeout(rulingCooldownTimer);
+        rulingCooldownTimer = setTimeout(() => { rulingCooldown = false; }, 3000);
+
+        playInterruptChime();
+        wakeFlash();
+        disputeCount++;
+        const dcEl = document.getElementById('dispute-counter');
+        if (dcEl) {
+            dcEl.textContent = `${disputeCount} Dispute${disputeCount !== 1 ? 's' : ''}`;
+            dcEl.classList.add('active');
+        }
+        sessionDisputeLog.push({
+            topic: result.keyword || (result.keywords?.join('+')) || 'unknown',
+            trigger: originalText.slice(0, 120),
+            timestamp: new Date().toISOString()
+        });
+
+        if (topic) {
+            const html = renderRuling(topic);
+            if (html) {
+                showRuling(html, topic, { isDispute: true });
+                speak(buildSpokenText(topic));
+                return;
+            }
+        }
+        // Fallback if keyword not in our DB
+        triggerContradictionRuling(null, originalText);
+    }
+
+    else if (result.action === 'correct') {
+        if (rulingCooldown) return;
+        // Someone stated a rule wrong — soft correction
+        if (topic) {
+            // If Claude spotted a correction note, inject it into the bubble
+            triggerDirectRuling(topic, originalText, true, result.correction);
+        }
+    }
+
+    else if (result.action === 'question') {
+        if (rulingCooldown) return;
+        if (topic) {
+            triggerDirectRuling(topic, originalText, false, null);
+        }
+    }
+}
+
+function buildTopicFromClaudeResult(result) {
+    // Two-keyword interaction
+    if (result.keywords && result.keywords.length >= 2) {
+        const [a, b] = result.keywords;
+        const interaction = getKnownInteraction(a, b);
+        if (interaction) return interaction;
+        // Both need to exist in KEYWORDS
+        const validKws = result.keywords.filter(k => window.KEYWORDS[k]);
+        if (validKws.length >= 2) return { type: 'multi_keyword', keywords: validKws };
+        if (validKws.length === 1) return { type: 'keyword', keyword: validKws[0], context: null };
+    }
+
+    // Single keyword
+    if (result.keyword && window.KEYWORDS[result.keyword]) {
+        return { type: 'keyword', keyword: result.keyword, context: null };
+    }
+
+    // Claude named a keyword we don't have — try a fuzzy match against our DB
+    if (result.keyword) {
+        const lower = result.keyword.toLowerCase();
+        const match = Object.keys(window.KEYWORDS).find(k =>
+            k.includes(lower) || lower.includes(k)
+        );
+        if (match) return { type: 'keyword', keyword: match, context: null };
+    }
+
+    return null;
+}
 
 // ── Question signal patterns ─────────────────────────────────────────
 // These indicate the speaker WANTS an answer, not just making a statement
@@ -1793,11 +2078,22 @@ function extractQuestionSubject(text) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// INTERIM HANDLER — fast path for contradictions only
+// INTERIM HANDLER — instant regex fast-path for obvious disputes only
 // ─────────────────────────────────────────────────────────────────────
 function handleInterim(text) {
     if (isPaused || contradictionFired || isSpeaking) return;
     if (!checkForContradiction(text)) return;
+    // Only fire on the most unambiguous contradiction phrases
+    // so we don't false-positive before the sentence is finished
+    const hardTriggers = [
+        /\bno it (doesn'?t|can'?t|won'?t|isn'?t)\b/i,
+        /\bthat'?s? (wrong|not right|incorrect)\b/i,
+        /\byou'?re? wrong\b/i,
+        /\bask veritas\b/i,
+        /\bveritas\b/i,
+        /\bcheck the ruling\b/i,
+    ];
+    if (!hardTriggers.some(p => p.test(text))) return;
     contradictionFired = true;
     clearTimeout(contradictionResetTimer);
     contradictionResetTimer = setTimeout(() => { contradictionFired = false; }, 2000);
@@ -1806,13 +2102,36 @@ function handleInterim(text) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// FINAL HANDLER — full conversational understanding
+// FINAL HANDLER — Claude API is primary, regex is fallback
 // ─────────────────────────────────────────────────────────────────────
 function handleFinal(text) {
     if (isPaused || isSpeaking) return;
 
-    // Always buffer for context tracking
+    // Always buffer for context and transcript
     bufferAdd(text);
+    transcriptAdd(text);
+
+    // ── 0. Clarification mode — Veritas asked what rule is disputed,
+    //       next utterance IS the answer, bypass everything ──
+    if (waitingForClarification) {
+        exitClarificationMode();
+        rulingCooldown = false;
+        clearTimeout(rulingCooldownTimer);
+        // Send this clarification answer straight to Claude
+        askClaude(text).then(result => {
+            if (result && result.action !== 'ignore') {
+                actOnClaudeResponse(result, text);
+            } else {
+                // Claude didn't find it either — try our own resolvers
+                const topic = resolveContradictionTopic(text) || resolveQuestion(text);
+                if (topic) {
+                    const html = renderRuling(topic);
+                    if (html) { showRuling(html, topic, { isDispute: true }); speak(buildSpokenText(topic)); }
+                }
+            }
+        });
+        return;
+    }
 
     // ── 1. Contradiction already fired on interim → reset and skip ──
     if (contradictionFired) {
@@ -1823,94 +2142,58 @@ function handleFinal(text) {
 
     const lower = text.toLowerCase().trim();
 
-    // ── 2. Contradiction / dispute detected ──
+    // ── 2. INSTANT REGEX — catches unambiguous disputes before Claude returns ──
+    // This fires immediately. Claude runs in parallel and may also fire,
+    // but the cooldown prevents a double ruling.
     if (checkForContradiction(text)) {
         const topic = resolveContradictionTopic(text);
-        triggerContradictionRuling(topic, text);
-        return;
-    }
-
-    // ── 3. Directly addressed ("Veritas, how does trample work?") ──
-    if (isDirectedAtVeritas(text)) {
-        // Strip the wake word and treat the rest as the question
-        const stripped = text.replace(/\bveritas[,.]?\s*/gi, '').trim();
-        const topic = stripped.length > 2
-            ? resolveQuestion(stripped)
-            : resolveContradictionTopic(text) || lastRuling?.analysis || null;
+        // If we found a clear topic, fire now and don't wait for Claude
         if (topic) {
-            triggerDirectRuling(topic, text);
-        } else {
-            triggerDirectRuling(null, text);
-        }
-        return;
-    }
-
-    // ── 4. Direct question containing keywords ──
-    if (isQuestion(text)) {
-        const topic = resolveQuestion(text);
-        if (topic) {
-            triggerDirectRuling(topic, text);
+            triggerContradictionRuling(topic, text);
+            // Claude still runs silently for logging but won't fire (cooldown)
+            askClaude(text); // fire and forget
             return;
         }
+        // Ambiguous contradiction — let Claude figure out what it's about
+        // Show the interim "detected" state immediately while Claude resolves
+        playInterruptChime();
+        wakeFlash();
+        document.getElementById('bubble-badge').innerHTML = '<div class="dispute-badge">⚑ Dispute Detected</div>';
+        document.getElementById('bubble-level').innerHTML = '';
+        document.getElementById('bubble-verdict').innerHTML = '<span style="color:rgba(255,255,255,0.3);">Analyzing…</span>';
+        document.getElementById('bubble-analogy').innerHTML = '';
+        document.getElementById('bubble-action').innerHTML = '';
+        document.getElementById('ruling-details-inner').innerHTML = '';
+        document.getElementById('ruling-overlay').classList.add('show');
 
-        // Question but no keyword found in THIS sentence.
-        // Only fall back to context if the sentence is clearly a pronoun reference
-        // like "can it target?" / "does that work?" / "what does it do?"
-        // — meaning "it/that/this" is referring to whatever was JUST discussed.
-        // We only look at the single most recent utterance, not a wide buffer.
-        if (isPronounReference(text)) {
-            const immediate = getImmediateContextKeyword();
-            if (immediate) {
-                triggerDirectRuling(immediate, text);
-                return;
+        askClaude(text).then(result => {
+            if (result && result.action !== 'ignore') {
+                actOnClaudeResponse(result, text);
+            } else {
+                // Claude also couldn't find it — ask the table
+                document.getElementById('bubble-verdict').innerHTML = "Got it — what's the rule being disputed? Say the keyword or describe what happened.";
+                document.getElementById('ruling-details-inner').innerHTML = `<div class="detail-prose" style="color:rgba(255,255,255,0.3);padding:20px 0;">
+                    Listening… say something like <em>"hexproof"</em> or <em>"trample and deathtouch"</em>.
+                </div>`;
+                speak('What is the rule being disputed?');
+                enterClarificationMode();
+                // Manually increment dispute counter
+                disputeCount++;
+                const dcEl = document.getElementById('dispute-counter');
+                if (dcEl) { dcEl.textContent = `${disputeCount} Dispute${disputeCount !== 1 ? 's' : ''}`; dcEl.classList.add('active'); }
             }
-        }
-
-        // Card name question — e.g. "what does Snapcaster Mage do?"
-        const cardMatch = text.match(
-            /(?:what does|how does|what is|look up|search for|tell me about|what about)\s+([A-Z][a-zA-Z\s',-]{2,40}?)(?:\s+do|\s+work|\s+mean|\?|$)/i
-        );
-        if (cardMatch) {
-            const possibleCard = cardMatch[1].trim();
-            const isKnownKw = Object.keys(window.KEYWORDS).some(k => matchKw(k, possibleCard.toLowerCase()));
-            if (!isKnownKw && possibleCard.length > 3) {
-                showCardRuling(possibleCard);
-                return;
-            }
-        }
-
-        // Question with no keyword and no pronoun reference — stay silent.
-        // Do NOT reach into the buffer and guess. That's what caused the wrong answer.
+        });
         return;
     }
 
-    // ── 5. Non-question but contains keyword + context that suggests
-    //       someone is explaining a rule (declarative claim) ──
-    //       e.g. "trample means all damage goes through"
-    //       These are table discussions worth tracking but NOT answering
-    //       unless it looks like a claim being made confidently about the rule
-    const foundKws = Object.keys(window.KEYWORDS)
-        .filter(k => matchKw(k, lower))
-        .sort((a, b) => b.length - a.length);
-
-    if (foundKws.length > 0 && DECLARATIVE_CLAIM_PATTERNS.some(p => p.test(text))) {
-        // Someone is making a declarative claim about a rule.
-        // Buffer it — if it's wrong someone will contradict it and Veritas fires.
-        // But if they say something factually wrong AND phrased as a rule,
-        // check if what they said contradicts the actual ruling.
-        const kw = foundKws[0];
-        const d = window.KEYWORDS[kw];
-        if (d) {
-            const claimedWrong = detectIncorrectClaim(text, kw, d);
-            if (claimedWrong) {
-                // Proactively correct — someone just stated the rule wrong
-                triggerDirectRuling({ type: 'keyword', keyword: kw, context: detectContext(lower) }, text, true);
-            }
-        }
-        // Otherwise: buffer silently — let the conversation continue
-    }
-
-    // ── 6. Everything else → stay silent, keep building context ──
+    // ── 3. Everything else → send to Claude and let it decide ──
+    // This is where the magic happens — casual conversation, rule statements,
+    // sarcastic corrections, buried keywords — Claude reads all of it.
+    askClaude(text).then(result => {
+        if (!result || result.action === 'ignore') return;
+        if (result.confidence === 'low' && result.action !== 'dispute') return;
+        actOnClaudeResponse(result, text);
+    });
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -1920,7 +2203,7 @@ function resolveQuestion(text) {
     const lower = text.toLowerCase();
     const ctx = detectContext(lower);
 
-    // Find all matching keywords, longest first
+    // 1. Direct keyword match in this sentence
     const foundKws = Object.keys(window.KEYWORDS)
         .filter(k => matchKw(k, lower))
         .sort((a, b) => b.length - a.length);
@@ -1930,9 +2213,20 @@ function resolveQuestion(text) {
         if (interaction) return interaction;
         return { type: 'multi_keyword', keywords: foundKws };
     }
-
     if (foundKws.length === 1) {
         return { type: 'keyword', keyword: foundKws[0], context: ctx };
+    }
+
+    // 2. No exact keyword — infer from concepts in the sentence
+    // e.g. "can you target it" → hexproof/shroud/ward/protection
+    const inferred = inferKeywordsFromConcepts(lower);
+    if (inferred.length >= 2) {
+        const interaction = getKnownInteraction(inferred[0], inferred[1]);
+        if (interaction) return interaction;
+        return { type: 'multi_keyword', keywords: inferred };
+    }
+    if (inferred.length === 1) {
+        return { type: 'keyword', keyword: inferred[0], context: ctx };
     }
 
     return null;
@@ -1985,14 +2279,13 @@ function detectIncorrectClaim(text, kw, d) {
 // TRIGGER DIRECT RULING — non-dispute answer
 // Softer than a contradiction ruling — no chime, no flash, just answers
 // ─────────────────────────────────────────────────────────────────────
-function triggerDirectRuling(topic, originalText, isCorrection) {
+function triggerDirectRuling(topic, originalText, isCorrection, correctionNote) {
     if (rulingCooldown) return;
     rulingCooldown = true;
     clearTimeout(rulingCooldownTimer);
     rulingCooldownTimer = setTimeout(() => { rulingCooldown = false; }, 2500);
 
     if (isCorrection) {
-        // Gentle chime — softer than dispute
         try {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
@@ -2006,14 +2299,13 @@ function triggerDirectRuling(topic, originalText, isCorrection) {
     }
 
     if (!topic) {
-        // No keyword found but was addressed — respond generically
         document.getElementById('bubble-badge').innerHTML = '';
         document.getElementById('bubble-level').innerHTML = '';
         document.getElementById('bubble-verdict').innerHTML = "I heard you — could you name the specific keyword or card you're asking about?";
         document.getElementById('bubble-analogy').innerHTML = '';
         document.getElementById('bubble-action').innerHTML = '';
         document.getElementById('ruling-details-inner').innerHTML = `<div class="detail-prose" style="color:rgba(255,255,255,0.25);">
-            Say a keyword name (like "trample", "hexproof", "deathtouch") or a card name and Veritas will pull the ruling.
+            Say a keyword name like "trample", "hexproof", or "deathtouch" and Veritas will pull the ruling.
         </div>`;
         document.getElementById('ruling-overlay').scrollTop = 0;
         document.getElementById('ruling-overlay').classList.add('show');
@@ -2024,8 +2316,17 @@ function triggerDirectRuling(topic, originalText, isCorrection) {
     const html = renderRuling(topic);
     if (html) {
         showRuling(html, topic, { isDispute: false, isCorrection });
+        // If Claude provided a specific correction note, inject it into the bubble
+        if (correctionNote && isCorrection) {
+            const verdictEl = document.getElementById('bubble-verdict');
+            if (verdictEl) {
+                verdictEl.innerHTML += `<div style="margin-top:10px;padding:8px 12px;background:rgba(255,230,109,0.07);border:1px solid rgba(255,230,109,0.2);border-radius:8px;font-size:13px;color:rgba(255,230,109,0.75);">
+                    ⚠ ${correctionNote}
+                </div>`;
+            }
+        }
         const spoken = buildSpokenText(topic);
-        if (spoken) speak(spoken);
+        if (spoken) speak(isCorrection && correctionNote ? correctionNote + '. ' + spoken : spoken);
     }
 }
 
@@ -2384,4 +2685,4 @@ window.addEventListener('load', () => {
 });
 </script>
 </body>
-</html>
+    </html>
