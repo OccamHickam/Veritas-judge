@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veritas \u2014 MTG Rules</title>
+    <script src="keywords.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            background: #060609;
+            color: #e0e0f0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* \u2500\u2500 STATUS BAR \u2500\u2500 */
+        #status-bar {
+            position: fixed; top: 0; left: 0; right: 0; height: 48px;
+            background: rgba(6,6,9,0.9);
+            border-bottom: 1px solid rgba(0,167,181,0.12);
+            display: flex; align-items: center;
+            justify-content: space-between;
+            padding: 0 20px; z-index: 100;
+        }
+        #session-timer {
+            font-family: monospace; font-size: 16px;
+            color: rgba(0,167,181,0.6); letter-spacing: 3px;
+        }
+        #dispute-counter {
+            font-size: 11px; font-weight: 600; letter-spacing: 2px;
+            text-transform: uppercase; color: rgba(255,107,107,0.4);
+            transition: color 0.3s;
+        }
+        #dispute-counter.active { color: #ff6b6b; }
+        #end-btn {
+            background: transparent;
+            border: 1px solid rgba(255,107,107,0.25);
+            color: rgba(255,107,107,0.5);
+            padding: 5px 16px; border-radius: 20px;
+            font-size: 11px; text-transform: uppercase; letter-spacing: 2px;
+            cursor: pointer;
+        }
+        #end-btn:hover { border-color: #ff6b6b; color: #ff6b6b; }
+
+        /* \u2500\u2500 STANDBY \u2500\u2500 */
+        #standby {
+            position: fixed; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 1;
+        }
+
+        /* Orb */
+        .orb {
+            position: relative;
+            width: 160px; height: 160px;
+            margin-bottom: 40px;
+        }
+        .orb-ring {
+            position: absolute; inset: 0; border-radius: 50%;
+            border: 1px solid rgba(0,167,181,0.14);
+            animation: spin 9s linear infinite;
+        }
+        .orb-ring:nth-child(2) { inset:14px; border-color:rgba(0,167,181,0.08); animation-duration:14s; animation-direction:reverse; }
+        .orb-ring:nth-child(3) { inset:28px; border-color:rgba(0,167,181,0.06); animation-duration:6s; }
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+        .orb-core {
+            position: absolute; inset: 40px; border-radius: 50%;
+            background: radial-gradient(circle at 40% 35%, rgba(0,167,181,0.18) 0%, transparent 100%);
+            border: 1px solid rgba(0,167,181,0.2);
+            animation: breathe 5s ease-in-out infinite;
+        }
+        @keyframes breathe { 0%,100%{opacity:0.6;transform:scale(1)} 50%{opacity:1;transform:scale(1.05)} }
+
+        .orb-dot {
+            position: absolute; top:50%; left:50%;
+            width:5px; height:5px; border-radius:50%;
+            background: rgba(0,167,181,0.6);
+            transform: translate(-50%,-50%);
+            animation: pulse 5s ease-in-out infinite;
+        }
+        @keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:1;box-shadow:0 0 12px rgba(0,167,181,0.6)} }
+
+        /* Orb states */
+        .orb.listening  .orb-ring { border-color:rgba(0,167,181,0.14); }
+        .orb.paused     .orb-ring { border-color:rgba(255,255,255,0.04); animation-duration:30s !important; }
+        .orb.paused     .orb-core { background:none; border-color:rgba(255,255,255,0.06); }
+        .orb.paused     .orb-dot  { background:rgba(255,255,255,0.15); }
+
+        .orb-name {
+            font-family: Georgia, serif;
+            font-size: 11px; letter-spacing: 9px; text-transform: uppercase;
+            color: rgba(0,167,181,0.3); margin-bottom: 8px;
+        }
+        #orb-status {
+            font-size: 10px; letter-spacing: 4px; text-transform: uppercase;
+            color: rgba(255,255,255,0.1);
+            animation: fade 4s ease-in-out infinite;
+        }
+        @keyframes fade { 0%,100%{opacity:0.3} 50%{opacity:0.8} }
+
+        /* \u2500\u2500 DEBUG CONSOLE \u2500\u2500 */
+        #debug-log {
+            position: fixed; bottom: 50px; left: 0; right: 0;
+            max-height: 120px; overflow-y: auto;
+            background: rgba(0,0,0,0.85);
+            border-top: 1px solid rgba(0,167,181,0.15);
+            padding: 4px 12px;
+            font-family: monospace; font-size: 11px;
+            display: none; z-index: 200;
+        }
+        #debug-log.show { display: block; }
+        .dl { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .dl.heard  { color: rgba(78,205,196,0.9); }
+        .dl.intent { color: rgba(255,230,109,0.8); }
+        .dl.action { color: rgba(100,200,255,0.9); }
+        .dl.silent { color: rgba(255,255,255,0.25); }
+        .dl.err    { color: rgba(255,107,107,0.9); }
+
+        /* \u2500\u2500 CONTROLS \u2500\u2500 */
+        #controls {
+            position: fixed; bottom: 0; left: 0; right: 0; height: 48px;
+            background: rgba(6,6,9,0.7);
+            border-top: 1px solid rgba(255,255,255,0.04);
+            display: flex; align-items: center; justify-content: center;
+            gap: 6px; z-index: 100;
+        }
+        .ctrl {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.07);
+            color: rgba(255,255,255,0.3);
+            padding: 5px 14px; border-radius: 16px;
+            font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .ctrl:hover { border-color:rgba(0,167,181,0.4); color:rgba(0,167,181,0.8); }
+
+        /* \u2500\u2500 WAKE FLASH \u2500\u2500 */
+        #wake-flash {
+            position: fixed; inset: 0; z-index: 999;
+            pointer-events: none; opacity: 0;
+            background: rgba(0,167,181,0.12);
+        }
+        @keyframes flashAnim { 0%{opacity:1} 100%{opacity:0} }
+        #wake-flash.fire { animation: flashAnim 0.4s ease-out forwards; }
+
+        /* \u2500\u2500 RULING OVERLAY \u2500\u2500 */
+        #ruling-overlay {
+            position: fixed; inset: 0;
+            background: #07070e;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        #ruling-overlay.show { display: flex; }
+
+        /* Judge stage */
+        #judge-stage {
+            min-height: 50vh;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: flex-end;
+            position: relative; padding-bottom: 0;
+            flex-shrink: 0;
+        }
+        #judge-stage::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: radial-gradient(ellipse 55% 45% at 50% 85%, rgba(0,167,181,0.08) 0%, transparent 70%);
+        }
+
+        /* Figure */
+        .judge-fig { width: 140px; height: 230px; position: relative; }
+        .judge-head {
+            position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+            width: 54px; height: 60px; border-radius: 50% 50% 40% 40%;
+            border: 1px solid rgba(0,167,181,0.16);
+            background: radial-gradient(ellipse at 50% 40%, rgba(0,167,181,0.06) 0%, transparent 70%);
+        }
+        .judge-head::after {
+            content: ''; position: absolute;
+            top:18px; left:9px; right:9px; bottom:9px;
+            background: rgba(0,0,0,0.9); border-radius: 50%;
+        }
+        .judge-eyes {
+            position: absolute; top:29px; left:50%; transform:translateX(-50%);
+            width:26px; display:flex; justify-content:space-between; z-index:2;
+        }
+        .judge-eyes::before, .judge-eyes::after {
+            content: ''; width:5px; height:2px; border-radius:50%;
+            background: rgba(0,167,181,0.65);
+            box-shadow: 0 0 7px rgba(0,167,181,0.8);
+            animation: glow 4s ease-in-out infinite;
+        }
+        @keyframes glow { 0%,100%{opacity:0.4} 50%{opacity:1} }
+        .judge-cloak {
+            position: absolute; top:48px; left:0; right:0; bottom:0;
+            background: linear-gradient(175deg, rgba(10,10,22,0.97) 0%, rgba(5,5,14,0.99) 60%, rgba(0,167,181,0.03) 100%);
+            border-radius: 16px 16px 40% 40%;
+            border: 1px solid rgba(0,167,181,0.1); border-top: none;
+        }
+        .judge-cloak::after {
+            content: ''; position: absolute;
+            bottom:0; left:22%; right:22%; height:1px;
+            background: rgba(0,167,181,0.15); border-radius:50%;
+        }
+
+        /* Bubble */
+        .bubble {
+            position: relative;
+            background: rgba(9,10,22,0.98);
+            border: 1px solid rgba(0,167,181,0.28);
+            border-radius: 18px; padding: 22px 26px;
+            margin: 0 18px;
+            max-width: 680px; width: calc(100% - 36px);
+            box-shadow: 0 0 40px rgba(0,167,181,0.06);
+            animation: bubIn 0.3s 0.15s cubic-bezier(0.22,1,0.36,1) both;
+        }
+        @keyframes bubIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+        .bubble::before {
+            content: ''; position: absolute;
+            top:-9px; left:50%; transform:translateX(-50%);
+            border-left:9px solid transparent; border-right:9px solid transparent;
+            border-bottom:9px solid rgba(0,167,181,0.28);
+        }
+        .bubble::after {
+            content: ''; position: absolute;
+            top:-7px; left:50%; transform:translateX(-50%);
+            border-left:8px solid transparent; border-right:8px solid transparent;
+            border-bottom:8px solid rgba(9,10,22,0.98);
+        }
+        #bubble-badge { margin-bottom: 8px; min-height: 0; }
+        .badge {
+            display: inline-flex; align-items: center; gap:5px;
+            padding: 2px 10px; border-radius: 20px;
+            font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+        }
+        .badge.dispute { background:rgba(255,107,107,0.09); border:1px solid rgba(255,107,107,0.28); color:rgba(255,128,128,0.85); }
+        .badge.correction { background:rgba(255,230,109,0.08); border:1px solid rgba(255,230,109,0.28); color:rgba(255,230,109,0.8); }
+        .badge.info { background:rgba(0,167,181,0.08); border:1px solid rgba(0,167,181,0.28); color:rgba(0,167,181,0.8); }
+        #bubble-verdict {
+            font-size: 17px; line-height: 1.7; color: #dde0f0;
+        }
+        #bubble-verdict strong { color: #fff; }
+        #bubble-verdict .teal { color: #4ecdc4; }
+        #bubble-analogy {
+            margin-top: 12px;
+            display: flex; align-items:flex-start; gap: 8px;
+            background: rgba(0,167,181,0.05); border:1px solid rgba(0,167,181,0.13);
+            border-radius: 10px; padding: 9px 13px;
+            font-size: 13px; color: rgba(0,167,181,0.7); font-style: italic;
+        }
+        #bubble-analogy:empty { display: none; }
+        #bubble-action {
+            margin-top: 9px;
+            display: flex; align-items: center; gap: 9px;
+            background: rgba(78,205,196,0.05); border:1px solid rgba(78,205,196,0.15);
+            border-radius: 10px; padding: 9px 13px;
+            font-size: 13px; color: rgba(200,240,238,0.75);
+        }
+        #bubble-action:empty { display: none; }
+        .action-lbl { font-size: 9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#4ecdc4; white-space:nowrap; }
+
+        /* Scroll hint */
+        .scroll-hint {
+            display: flex; flex-direction:column; align-items:center; gap:5px;
+            padding: 14px 0 6px; flex-shrink:0;
+            color: rgba(0,167,181,0.28); font-size:10px; letter-spacing:2px; text-transform:uppercase;
+            animation: bob 2s ease-in-out infinite;
+        }
+        @keyframes bob { 0%,100%{transform:translateY(0);opacity:0.35} 50%{transform:translateY(4px);opacity:0.65} }
+        .scroll-hint svg { width:14px; height:14px; }
+
+        /* Details */
+        #ruling-details {
+            background: rgba(0,0,0,0.45);
+            border-top: 1px solid rgba(0,167,181,0.08);
+            padding: 26px 22px 100px; flex-shrink:0;
+        }
+        #ruling-details-inner { max-width: 680px; margin: 0 auto; }
+
+        /* Detail pieces */
+        .detail-prose { font-size: 14px; color: #99a; line-height: 1.8; }
+        .detail-prose strong { color: #cce; }
+        .detail-prose .teal { color: #4ecdc4; }
+        .kw-plain { font-size: 14px; color: #bbc; line-height: 1.75; margin-bottom: 12px; }
+        .kw-plain strong { color: #dde; }
+        .nuance { font-size: 12px; color: rgba(160,160,180,0.7); line-height:1.6; padding-left:12px; border-left:2px solid rgba(0,167,181,0.18); margin-bottom:6px; }
+        .kw-ref { font-family: monospace; font-size: 10px; color: rgba(0,167,181,0.3); margin-top:10px; }
+        .mistake-box { background:rgba(255,107,107,0.06); border:1px solid rgba(255,107,107,0.2); border-radius:10px; padding:12px 14px; margin-bottom:12px; }
+        .mistake-lbl { font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:rgba(255,107,107,0.65); margin-bottom:5px; }
+        .action-box { background:rgba(78,205,196,0.05); border:1px solid rgba(78,205,196,0.18); border-radius:10px; padding:12px 14px; margin-bottom:12px; }
+        .action-box-lbl { font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:rgba(78,205,196,0.65); margin-bottom:5px; }
+        .example-box { background:rgba(255,230,109,0.04); border-left:3px solid rgba(255,230,109,0.3); padding:12px 16px; border-radius:0 8px 8px 0; margin-bottom:12px; }
+        .example-lbl { font-size:9px; color:rgba(255,230,109,0.6); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:700; }
+        .chip-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+        .kw-chip { background:rgba(0,167,181,0.06); border:1px solid rgba(0,167,181,0.2); color:rgba(78,205,196,0.75); padding:4px 12px; border-radius:20px; font-size:11px; cursor:pointer; }
+        .kw-chip:hover { background:rgba(0,167,181,0.14); color:#4ecdc4; }
+        .official-ruling { margin-top:16px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.04); }
+        .official-ruling-lbl { font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:#333; margin-bottom:5px; }
+        .official-ruling-ref { font-family:monospace; font-size:11px; color:#333; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); border-radius:5px; padding:5px 9px; display:inline-block; }
+        .card-grid { display:grid; grid-template-columns:200px 1fr; gap:20px; align-items:start; }
+        .card-img img { max-width:100%; border-radius:8px; box-shadow:0 8px 28px rgba(0,0,0,0.65); }
+        .card-name { font-size:18px; font-weight:700; color:rgba(0,167,181,0.9); margin-bottom:3px; }
+        .card-type { font-size:12px; color:#555; font-style:italic; margin-bottom:12px; }
+        .oracle-box { background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.05); padding:11px 13px; border-radius:8px; font-size:13px; color:#99a; line-height:1.65; white-space:pre-wrap; margin-bottom:12px; }
+        .verdict-banner { display:flex; align-items:center; gap:12px; border-radius:11px; padding:13px 16px; margin-bottom:16px; }
+        .verdict-banner.info    { background:rgba(0,167,181,0.07);   border:1px solid rgba(0,167,181,0.22); }
+        .verdict-banner.yes     { background:rgba(78,205,196,0.07);  border:1px solid rgba(78,205,196,0.25); }
+        .verdict-banner.no      { background:rgba(255,107,107,0.07); border:1px solid rgba(255,107,107,0.25); }
+        .verdict-banner.depends { background:rgba(255,230,109,0.06); border:1px solid rgba(255,230,109,0.25); }
+        .verdict-icon { font-size:20px; }
+        .verdict-statement { font-size:17px; font-weight:700; }
+        .verdict-banner.info    .verdict-statement { color:rgba(0,167,181,0.9); }
+        .verdict-banner.yes     .verdict-statement { color:#4ecdc4; }
+        .verdict-banner.no      .verdict-statement { color:#ff6b6b; }
+        .verdict-banner.depends .verdict-statement { color:#ffe66d; }
+        .multi-kw { padding:13px; margin-bottom:10px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:9px; }
+        .multi-kw h3 { color:rgba(0,167,181,0.9); margin-bottom:3px; font-size:14px; }
+        .multi-kw .ref { font-family:monospace; font-size:9px; color:#4ecdc4; margin-bottom:5px; }
+        .multi-kw p { font-size:12px; color:#99a; line-height:1.6; }
+
+        /* Close */
+        #close-btn {
+            position: fixed; top:13px; right:15px; z-index:1010;
+            width:32px; height:32px; border-radius:50%;
+            background:rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.1);
+            color:rgba(255,255,255,0.3); font-size:16px; cursor:pointer;
+            display:flex; align-items:center; justify-content:center;
+            backdrop-filter:blur(8px);
+        }
+        #close-btn:hover { border-color:#00a7b5; color:#00a7b5; }
+
+        /* History */
+        #history-panel { position:fixed; top:54px; right:14px; display:none; flex-direction:column; gap:4px; z-index:200; max-width:185px; }
+        #history-panel.show { display:flex; }
+        .h-item { display:flex; justify-content:space-between; align-items:center; gap:6px; background:rgba(6,6,9,0.9); border:1px solid rgba(0,167,181,0.13); border-radius:7px; padding:5px 9px; cursor:pointer; backdrop-filter:blur(8px); }
+        .h-item:hover { border-color:rgba(0,167,181,0.35); }
+        .h-label { font-size:11px; color:rgba(0,167,181,0.65); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-transform:capitalize; }
+        .h-time  { font-size:9px; color:rgba(255,255,255,0.2); white-space:nowrap; }
+
+        /* Session summary */
+        #session-summary { position:fixed; inset:0; background:rgba(0,0,0,0.93); display:none; align-items:center; justify-content:center; z-index:3000; padding:24px; }
+        #session-summary.show { display:flex; }
+        .summary-card { background:linear-gradient(155deg,#0d0d1c,#111125); border:1px solid rgba(0,167,181,0.28); border-radius:20px; padding:32px; max-width:440px; width:100%; }
+        .summary-title { font-size:11px; letter-spacing:4px; text-transform:uppercase; color:rgba(0,167,181,0.45); margin-bottom:22px; text-align:center; }
+        .summary-stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
+        .summary-stat { background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.05); border-radius:11px; padding:14px; text-align:center; }
+        .summary-val { font-family:monospace; font-size:24px; font-weight:500; color:#00a7b5; }
+        .summary-key { font-size:9px; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,0.2); margin-top:3px; }
+        .summary-kws { margin-bottom:20px; }
+        .summary-kws-label { font-size:9px; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,0.2); margin-bottom:7px; }
+        .summary-chips { display:flex; flex-wrap:wrap; gap:5px; }
+        .summary-chip { background:rgba(0,167,181,0.07); border:1px solid rgba(0,167,181,0.18); color:rgba(78,205,196,0.65); padding:3px 11px; border-radius:20px; font-size:10px; }
+        .summary-actions { display:flex; gap:8px; }
+        .sum-btn { flex:1; padding:10px; border-radius:10px; font-size:11px; text-transform:uppercase; letter-spacing:1px; cursor:pointer; }
+        .sum-primary { background:transparent; border:1px solid rgba(0,167,181,0.35); color:rgba(0,167,181,0.75); }
+        .sum-secondary { background:transparent; border:1px solid rgba(255,255,255,0.07); color:rgba(255,255,255,0.2); }
+
+        /* Canvas */
+        #ambient-canvas { position:fixed; inset:0; z-index:0; pointer-events:none; }
+
+        @media (max-width:600px) { .card-grid { grid-template-columns:1fr; } }
+    </style>
+</head>
+<body>
+
+<canvas id="ambient-canvas"></canvas>
+<div id="wake-flash"></div>
+
+<!-- Status bar -->
+<div id="status-bar">
+    <div id="session-timer">00:00:00</div>
+    <div id="dispute-counter">0 Disputes</div>
+    <button id="end-btn" onclick="endSession()">End Session</button>
+</div>
+
+<!-- History panel -->
+<div id="history-panel"></div>
+
+<!-- Standby -->
+<div id="standby">
+    <div class="orb listening" id="main-orb">
+        <div class="orb-ring"></div>
+        <div class="orb-ring"></div>
+        <div class="orb-ring"></div>
+        <div class="orb-core"></div>
+        <div class="orb-dot"></div>
+    </div>
+    <div class="orb-name">Veritas</div>
+    <div id="orb-status">Listening</div>
+</div>
+
+<!-- Debug console (press D to toggle) -->
+<div id="debug-log"></div>
+
+<!-- Controls -->
+<div id="controls">
+    <button class="ctrl" onclick="togglePause()">\u23ef Pause</button>
+    <button class="ctrl" onclick="repeatLastRuling()">\u21a9 Repeat</button>
+    <button class="ctrl" onclick="showManualSearch()">\u2315 Card Lookup</button>
+    <button class="ctrl" onclick="showRuleReference()">\u2261 Keywords</button>
+    <button class="ctrl" onclick="testManually()">\u26a1 Test</button>
+</div>
+
+<!-- Ruling overlay -->
+<div id="ruling-overlay">
+    <button id="close-btn" onclick="closeRuling()">\u2715</button>
+
+    <div id="judge-stage">
+        <div class="judge-fig">
+            <div class="judge-head"><div class="judge-eyes"></div></div>
+            <div class="judge-cloak"></div>
+        </div>
+        <div class="bubble">
+            <div id="bubble-badge"></div>
+            <div id="bubble-verdict">Analyzing\u2026</div>
+            <div id="bubble-analogy"></div>
+            <div id="bubble-action"></div>
+        </div>
+    </div>
+
+    <div class="scroll-hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        Scroll for full ruling
+    </div>
+
+    <div id="ruling-details">
+        <div id="ruling-details-inner"></div>
+    </div>
+</div>
+
+<!-- Session summary -->
+<div id="session-summary">
+    <div class="summary-card">
+        <div class="summary-title">Session Complete</div>
+        <div class="summary-stats" id="summary-stats"></div>
+        <div class="summary-kws" id="summary-keywords"></div>
+        <div class="summary-actions">
+            <button class="sum-btn sum-primary" onclick="confirmEndSession()">End Session</button>
+            <button class="sum-btn sum-secondary" onclick="dismissSummary()">Keep Playing</button>
+        </div>
+    </div>
+</div>
+
+<script>
+'use strict';
+
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+// KEYWORDS \u2014 load from keywords.js or use empty fallback
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+const KW = (typeof window.KEYWORDS === 'object' && window.KEYWORDS) ? window.KEYWORDS : {};
+
+function matchKw(kw, lower) {
+    if (kw.includes(' ')) return lower.includes(kw);
+    return new RegExp('\\b' + kw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\b','i').test(lower);
+}
+
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+// STATE
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+let recognition = null;
+let recRunning  = false;
+let recStopped  = false;
+let isPaused    = false;
+let isSpeaking  = false;
+let cooldown    = false;
+let cooldownTimer = null;
+let disputeCount  = 0;
+let sessionStart  = Date.now();
+let lastRuling    = null;
+const dispLog   = [];
+const rulingHist = [];
+const convBuf   = [];
+
+// Accumulator \u2014 Chrome splits sentences on natural pauses
+let pending = '';
+let pendingTimer = null;
+const GAP_MS = 1500;
+
+// Clarification mode
+let clarifying = false;
+let clarifyTimer = null;
+
+// Debug
+let debugOn = false;
+
+function dbg(msg, type) {
+    const el = document.getElementById('debug-log');
+    if (!el) return;
+    const d = document.createElement('div');
+    d.className = 'dl ' + (type||'');
+    d.textContent = new Date().toLocaleTimeString('en-US',{hour12:false}) + ' [' + (type||'log').toUpperCase().slice(0,6) + '] ' + msg;
+    el.appendChild(d);
+    el.scrollTop = el.scrollHeight;
+    while (el.children.length > 50) el.removeChild(el.firstChild);
+    console.debug('[V]', type, msg);
+}
+
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+// INTENT \u2014 what is this sentence doing?
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+function intent(text) {
+    const t = text.toLowerCase();
+
+    const D = [
+        /\bno[,. ]+it (doesn'?t|can'?t|won'?t|isn'?t)/i,
+        /\bthat'?s? (wrong|not right|incorrect|not how|not true)/i,
+        /\byou'?re? (wrong|incorrect|mistaken)/i,
+        /\b(nope|wrong)[,. ]/i,
+        /\bask veritas\b/i,
+        /\bveritas\b/i,
+        /\bcheck the (ruling|card)\b/i,
+        /\bread the card\b/i,
+        /\bthat doesn'?t (work|trigger|apply)\b/i,
+        /\bit doesn'?t (work|trigger|apply)\b/i,
+        /\bcan'?t (target|be targeted)\b/i,
+        /\bnot able to target\b/i,
+        /\byou can'?t (target|cast|block|attack|respond)\b/i,
+        /\bthat'?s? not (how|what|right)\b/i,
+        /\bno it (does|doesn'?t|can|can'?t)\b/i,
+        /doesn'?t work (like|that way)/i,
+    ];
+    if (D.some(p => p.test(t))) return 'dispute';
+
+    const Q = [
+        /\?\s*$/,
+        /^(what|how|does|do|can|is|are|will|would)\b/i,
+        /\b(what does|how does|does it|can it|is it)\b/i,
+        /\b(right|correct)\?/i,
+        /\b(explain|tell me|what is|what are)\b/i,
+    ];
+    if (Q.some(p => p.test(t))) return 'question';
+
+    const C = [
+        /\b(hexproof|trample|flying|deathtouch|lifelink|indestructible|haste|reach|menace|shroud|ward|protection|first strike|double strike)\b.*(means?|stops?|prevents?|lets?|allows?|makes?)/i,
+        /\bbecause (of )?(hexproof|trample|flying|deathtouch|lifelink|indestructible)\b/i,
+        /\b(it|this|that|the creature) has (hexproof|trample|flying|deathtouch|lifelink|indestructible|haste|reach|menace|shroud|ward)\b/i,
+        /\byou can'?t (target|block) (it|this|that)\b/i,
+    ];
+    if (C.some(p => p.test(t))) return 'claim';
+
+    return 'chatter';
+}
+
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+// ENTITIES \u2014 keywords, concepts, card names
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+function getKws(text) {
+    const lower = text.toLowerCase();
+    return Object.keys(KW).filter(k => matchKw(k,lower)).sort((a,b) => b.length - a.length);
+}
+
+const CONCEPTS = [
+    { r:/\b(target(ing)?|cast(ing)? on|can'?t be targeted)\b/i,  k:['hexproof','shroud','ward','protection'] },
+    { r:/\b(block(ing|ed)?|can'?t block|unblockable)\b/i,         k:['flying','menace','reach','trample'] },
+    { r:/\b(dies?|dying|death trigger|goes? to graveyard)\b/i,    k:['deathtouch','indestructible'] },
+    { r:/\b(can'?t die|won'?t die|can'?t be destroyed)\b/i,       k:['indestructible','regenerate'] },
+    { r:/\b(deal(s|ing)? damage|combat damage)\b/i,               k:['deathtouch','lifelink','first strike'] },
+    { r:/\b(gain(s|ing)? life)\b/i,                                k:['lifelink'] },
+    { r:/\b(attack(s|ing)?|swings?)\b/i,                           k:['haste','vigilance','menace'] },
+    { r:/\b(exil(e|ed|ing)|blink|flicker)\b/i,                    k:['exile'] },
+    { r:/\b(sacrific(e|ed|ing)|sac)\b/i,                          k:['sacrifice'] },
+    { r:/\b(commander damage|command zone|21 damage)\b/i,          k:['commander damage','commander tax'] },
+];
+
+function getConcepts(text) {
+    const seen = new Set(), found = [];
+    const lower = text.toLowerCase();
+    for (const e of CONCEPTS) {
+        if (e.r.test(lower)) {
+            for (const k of e.k) {
+                if (!seen.has(k) && KW[k]) { seen.add(k); found.push(k); }
+            }
+        }
+    }
+    return found;
+}
+
+const SKIP = new Set(['i','you','he','she','it','we','they','this','that','the','a','an',
+    'and','or','but','so','player','creature','spell','card','damage','life','counter',
+    'wait','hold','actually','yeah','okay','jason','jack','john','mike','alex','dave']);
+
+function getCardName(text) {
+    const q = text.match(/["']([A-Z][a-zA-Z\s',\-]{2,30}?)["']/);
+    if (q) return q[1].trim();
+    const n = text.match(/(?:card (?:named|called)|playing|casting)\s+([A-Z][a-zA-Z\s'\-]{2,25}?)(?:\s+(?:does|is|can|has)|[,.]|$)/i);
+    if (n && !SKIP.has(n[1].toLowerCase())) return n[1].trim();
+    return null;
+}
+
+function getPriorKws() {
+    if (convBuf.length < 2) return [];
+    const prior = convBuf[convBuf.length - 2];
+    if (!prior) return [];
+    return prior.kws.length > 0 ? prior.kws : getConcepts(prior.text);
+}
+
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+// WRONG CLAIM CHECK
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+const WRONG = {
+    hexproof: [
+        { p:/nobody|no one|no spell|stops (all|every|any)/i,
+          f:'Hexproof only stops opponents targeting it \u2014 you can still target your own hexproof creatures.' },
+        { p:/can'?t be (affected|touched) by anything/i,
+          f:'Hexproof stops targeting only \u2014 board wipes and non-targeting effects still apply.' },
+    ],
+    trample: [
+        { p:/all (the )?damage goes? through|ignores? blockers?/i,
+          f:'Trample still requires assigning lethal damage to each blocker first \u2014 only the excess goes to the player.' },
+    ],
+    indestructible: [
+        { p:/can'?t be (removed|killed|exiled)|nothing can (kill|destroy|remove)/i,
+          f:'Indestructible stops destroy effects but exile, -X/-X to 0 toughness, and sacrifice still work.' },
+    ],
+    'first strike': [
+        { p:/deals? damage twice|hits? twice/i,
+          f:'First strike deals damage once in the first step only. Double strike deals damage in both steps.' },
+    ],
+    deathtouch: [
+        { p:/kills? (the )?player|any damage.*player/i,
+          f:'Deathtouch only applies to creatures \u2014 players take normal damage.' },
+    ],
+    flying: [
+        { p:/nothing can block|no creature can block/i,
+          f:'Flying creatures can be blocked by other creatures with flying OR reach.' },
+    ],
+};
+
+function checkWrong(text, kw) {
+    const e = WRONG[kw];
+    if (!e) return null;
+    for (const w of e) if (w.p.test(text)) return w.f;
+    return null;
+}
+
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+// KNOWN INTERACTIONS
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+const INTERACTIONS = {
+    'trample+deathtouch': { tag:'yes', title:'Trample + Deathtouch',
+        body:'<p>With deathtouch, any damage is lethal. With trample, you only need <strong>lethal damage</strong> to each blocker \u2014 the rest goes to the player.</p><p style="margin-top:10px;">Assign <span class="teal">1 damage</span> to each blocker (lethal from deathtouch). All remaining power tramples to the defending player.</p>',
+        rule:'702.19b + 702.2b' },
+    'first strike+deathtouch': { tag:'yes', title:'First Strike + Deathtouch',
+        body:'<p>In the first strike damage step, this creature deals damage \u2014 and because of deathtouch, <strong>1 damage kills any creature</strong>. The blocked creature dies before dealing damage back.</p>',
+        rule:'702.7b + 702.2b' },
+    'hexproof+indestructible': { tag:'info', title:'Hexproof + Indestructible',
+        body:'<p>Together these stop almost all removal:<br>\u2022 <span class="teal">Hexproof</span> \u2014 opponents cannot target it<br>\u2022 <span class="teal">Indestructible</span> \u2014 destroy effects and lethal damage do nothing<br><br>What still works: <strong>exile</strong>, <strong>sacrifice effects</strong>, <strong>\u2212X/\u2212X to 0 toughness</strong>.</p>',
+        rule:'702.11c + 702.12b' },
+    'lifelink+double strike': { tag:'yes', title:'Lifelink + Double Strike',
+        body:'<p>Double strike deals damage in two separate steps. Lifelink gains life equal to damage dealt.<br><br>Result: <strong>life gained twice</strong> \u2014 once per combat damage step.</p>',
+        rule:'702.8b + 702.15b' },
+};
+function getIx(a,b) {
+    const d = INTERACTIONS[a+'+'+b] || INTERACTIONS[b+'+'+a];
+    return d ? { type:'semantic', data:d } : null;
+}
+
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+// REASON \u2014 what should Veritas do?
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+function reason(text) {
+    const i   = intent(text);
+    const kws = getKws(text);
+    const all = kws.length > 0 ? kws : getConcepts(text);
+    const ctx = /\battack/i.test(text) ? 'attacking' : /\bblock/i.test(text) ? 'blocking' : null;
+    const card = getCardName(text);
+
+    dbg('intent=' + i + ' kws=[' + all.slice(0,3).join(',') + '] card=' + (card||'-'), 'intent');
+
+    if (i === 'dispute') {
+        if (all.length >= 2) { const ix = getIx(all[0],all[1]); if (ix) return {action:'ruling',topic:ix}; return {action:'ruling',topic:{type:'multi_keyword',keywords:all}}; }
+        if (all.length === 1) return {action:'ruling',topic:{type:'keyword',keyword:all[0],context:ctx}};
+        if (card) return {action:'card',name:card};
+        const p = getPriorKws();
+        if (p.length > 0) return {action:'ruling',topic:{type:'keyword',keyword:p[0],context:ctx}};
+        return {action:'ask'};
+    }
+    if (i === 'claim') {
+        if (card) return {action:'card',name:card};
+        if (all.length > 0) { const fix = checkWrong(text,all[0]); if (fix) return {action:'correct',topic:{type:'keyword',keyword:all[0],context:ctx},fix}; }
+        return null;
+    }
+    if (i === 'question') {
+        if (all.length >= 2) { const ix = getIx(all[0],all[1]); if (ix) return {action:'ruling',topic:ix}; return {action:'ruling',topic:{type:'multi_keyword',keywords:all}}; }
+        if (all.length === 1) return {action:'ruling',topic:{type:'keyword',keyword:all[0],context:ctx}};
+        if (card) return {action:'card',name:card};
+        // Pronoun reference \u2014 check prior utterance
+        if (/\b(it|that|this)\b/i.test(text) && !Object.keys(KW).some(k=>matchKw(k,text.toLowerCase()))) {
+            const p = getPriorKws();
+            if (p.length > 0) return {action:'ruling',topic:{type:'keyword',keyword:p[0],context:ctx}};
+        }
+        return null;
+    }
+    return null;
+}
+
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+// ACT \u2014 execute the decision
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+function act(result, text) {
+    if (!result) { dbg('silent', 'silent'); return; }
+    dbg('act=' + result.action + (result.topic ? ' kw=' + (result.topic.keyword||result.topic.keywords&&result.topic.keywords[0]||'?') : ''), 'action');
+
+    if (result.action === 'card') { if (!cooldown) doCard(result.name, text); return; }
+
+    if (result.action === 'ask') {
+        if (cooldown) return;
+        setCool(4000); chime(); flash();
+        bump(text);
+        setOverlay('<span class="badge dispute">\u2691 Dispute</span>', "Got it \u2014 what's the rule? Name the keyword or card.", '', '');
+        setDetails('<div class="detail-prose" style="color:rgba(255,255,255,0.25);padding:16px 0;">Listening for the rule\u2026</div>');
+        openOverlay();
+        say('What is the rule being disputed?');
+        startClarify();
+        return;
+    }
+
+    if (!result.topic) { dbg('no topic', 'silent'); return; }
+    const html = renderTopic(result.topic);
+    if (!html) { dbg('no html for topic', 'silent'); return; }
+
+    if (result.action === 'ruling') {
+        if (cooldown) return;
+        setCool(3000); chime(); flash();
+        bump(text);
+        showRuling(html, result.topic, true);
+        say(spokenFor(result.topic));
+    } else if (result.action === 'correct') {
+        if (cooldown) return;
+        setCool(2500); softChime();
+        showRuling(html, result.topic, false, true, result.fix);
+        say(result.fix ? result.fix + '. ' + (spokenFor(result.topic)||'') : spokenFor(result.topic));
+    } else if (result.action === 'question') {
+        if (cooldown) return;
+        setCool(2500);
+        showRuling(html, result.topic, false);
+        say(spokenFor(result.topic));
+    }
+}
+
+function setCool(ms) {
+    cooldown = true;
+    clearTimeout(cooldownTimer);
+    cooldownTimer = setTimeout(() => { cooldown = false; }, ms);
+}
+
+function bump(text) {
+    disputeCount++;
+    const el = document.getElementById('dispute-counter');
+    if (el) { el.textContent = disputeCount + ' Dispute' + (disputeCount!==1?'s':''); el.classList.add('active'); }
+    dispLog.push({ trigger:(text||'').slice(0,120), ts: new Date().toISOString() });
+}
+
+function startClarify() { clarifying=true; clearTimeout(clarifyTimer); clarifyTimer=setTimeout(()=>{clarifying=false;},12000); }
+function stopClarify()  { clarifying=false; clearTimeout(clarifyTimer); }
+
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+// RENDERING
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+function spokenFor(topic) {
+    if (!topic) return null;
+    if (topic.type==='keyword') {
+        const d = KW[topic.keyword];
+        if (!d) return topic.keyword;
+        return topic.keyword + '. ' + (d.tableTalk || d.plain.replace(/<[^>]+>/g,'')).slice(0,200);
+    }
+    if (topic.type==='semantic') return (topic.data.title||'') + '. ' + (topic.data.body||'').replace(/<[^>]+>/g,'').slice(0,200);
+    if (topic.type==='multi_keyword') return topic.keywords.slice(0,2).join(' and ') + '. See the ruling.';
+    return null;
+}
+
+function renderVerdict(tag, label) {
+    const icons = {yes:'\u2713',no:'\u2717',depends:'\u26a0',info:'\u2139'};
+    return `<div class="verdict-banner ${tag||'info'}"><div class="verdict-icon">${icons[tag]||'\u2139'}</div><div class="verdict-statement">${label}</div></div>`;
+}
+
+function renderTopic(topic) {
+    if (!topic) return null;
+    if (topic.type === 'keyword') {
+        const d = KW[topic.keyword];
+        if (!d) return `<div class="detail-prose">No data for <strong>${topic.keyword}</strong>.</div>`;
+        const nuances = (d.nuances||[]).map(n=>`<div class="nuance">\u2022 ${n}</div>`).join('');
+        const chips = (d.related||[]).filter(r=>KW[r]).map(r=>`<span class="kw-chip" onclick="quickLookup('${r}')">${r}</span>`).join('');
+        return `<div>
+            ${renderVerdict('info', topic.keyword.charAt(0).toUpperCase()+topic.keyword.slice(1))}
+            ${d.category ? `<div style="display:inline-block;background:rgba(0,167,181,0.1);border:1px solid rgba(0,167,181,0.25);color:rgba(0,167,181,0.9);font-size:10px;letter-spacing:2px;text-transform:uppercase;padding:3px 10px;border-radius:20px;margin-bottom:12px;">${d.category}</div>` : ''}
+            <div class="kw-plain">${d.plain}</div>
+            ${d.commonMistake ? `<div class="mistake-box"><div class="mistake-lbl">\u26a0 Common Mistake</div><div class="detail-prose">${d.commonMistake}</div></div>` : ''}
+            ${d.whatToDo ? `<div class="action-box"><div class="action-box-lbl">\u25b6 What To Do</div><div class="detail-prose">${d.whatToDo}</div></div>` : ''}
+            ${d.example ? `<div class="example-box"><div class="example-lbl">\ud83d\udcd6 Example</div><div class="detail-prose">${d.example}</div></div>` : ''}
+            ${nuances ? `<div style="margin-top:10px;">${nuances}</div>` : ''}
+            <div class="official-ruling"><div class="official-ruling-lbl">Official Ruling</div><div class="official-ruling-ref">${d.category||''} \u2014 CR ${d.rule}</div></div>
+            ${chips ? `<div class="chip-row">${chips}</div>` : ''}
+        </div>`;
+    }
+    if (topic.type === 'multi_keyword') {
+        const items = topic.keywords.slice(0,4).map(kw => {
+            const d = KW[kw]; if (!d) return '';
+            return `<div class="multi-kw"><h3>${kw.toUpperCase()}</h3><div class="ref">${d.category} \u00b7 CR ${d.rule}</div><p>${d.plain.replace(/<[^>]+>/g,'').split(/\.\s/)[0]}.</p></div>`;
+        }).join('');
+        return `<div>${renderVerdict('info', topic.keywords.slice(0,2).map(k=>k.charAt(0).toUpperCase()+k.slice(1)).join(' + '))}${items}</div>`;
+    }
+    if (topic.type === 'semantic') {
+        const d = topic.data;
+        return `<div>
+            ${renderVerdict(d.tag||'info', d.title||'Ruling')}
+            <div class="detail-prose">${d.body||''}</div>
+            ${d.rule ? `<div class="official-ruling"><div class="official-ruling-lbl">Official Ruling</div><div class="official-ruling-ref">CR ${d.rule}</div></div>` : ''}
+        </div>`;
+    }
+    return null;
+}
+
+function setOverlay(badge, verdict, analogy, action) {
+    const set = (id,v) => { const el=document.getElementById(id); if(el) el.innerHTML=v; };
+    set('bubble-badge', badge);
+    set('bubble-verdict', verdict);
+    set('bubble-analogy', analogy);
+    set('bubble-action', action);
+}
+
+function setDetails(html) {
+    const el = document.getElementById('ruling-details-inner');
+    if (el) el.innerHTML = html;
+}
+
+function openOverlay() {
+    const el = document.getElementById('ruling-overlay');
+    if (el) { el.scrollTop=0; el.classList.add('show'); }
+}
+
+function showRuling(html, topic, isDispute, isCorrection, fixNote) {
+    const badge = isDispute
+        ? '<span class="badge dispute">\u2691 Dispute Detected</span>'
+        : isCorrection
+            ? '<span class="badge correction">\u26a0 Correction</span>'
+            : '';
+
+    // Verdict text (what Veritas says)
+    let verdict = '';
+    if (topic.type === 'keyword') {
+        const d = KW[topic.keyword];
+        verdict = d ? (d.tableTalk || d.plain.replace(/<[^>]+>/g,'').split(/\.\s/)[0]) : topic.keyword;
+    } else if (topic.type === 'semantic') {
+        verdict = (topic.data.body||'').replace(/<[^>]+>/g,'').split(/\.\s/)[0];
+    } else if (topic.type === 'multi_keyword') {
+        verdict = topic.keywords.
