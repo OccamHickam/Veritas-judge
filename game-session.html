@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veritas — MTG Rules</title>
+    <script src="keywords.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#060609; color:#e0e0f0; font-family:'Segoe UI',system-ui,sans-serif; overflow:hidden; height:100vh; width:100vw; }
+
+        #status-bar { position:fixed; top:0; left:0; right:0; height:48px; background:rgba(6,6,9,0.9); border-bottom:1px solid rgba(0,167,181,0.12); display:flex; align-items:center; justify-content:space-between; padding:0 20px; z-index:100; }
+        #session-timer { font-family:monospace; font-size:16px; color:rgba(0,167,181,0.6); letter-spacing:3px; }
+        #dispute-counter { font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:rgba(255,107,107,0.4); transition:color 0.3s; }
+        #dispute-counter.active { color:#ff6b6b; }
+        #end-btn { background:transparent; border:1px solid rgba(255,107,107,0.25); color:rgba(255,107,107,0.5); padding:5px 16px; border-radius:20px; font-size:11px; text-transform:uppercase; letter-spacing:2px; cursor:pointer; }
+        #end-btn:hover { border-color:#ff6b6b; color:#ff6b6b; }
+
+        #standby { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:1; }
+
+        .orb { position:relative; width:160px; height:160px; margin-bottom:40px; }
+        .orb-ring { position:absolute; inset:0; border-radius:50%; border:1px solid rgba(0,167,181,0.14); animation:spin 9s linear infinite; }
+        .orb-ring:nth-child(2) { inset:14px; border-color:rgba(0,167,181,0.08); animation-duration:14s; animation-direction:reverse; }
+        .orb-ring:nth-child(3) { inset:28px; border-color:rgba(0,167,181,0.06); animation-duration:6s; }
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        .orb-core { position:absolute; inset:40px; border-radius:50%; background:radial-gradient(circle at 40% 35%,rgba(0,167,181,0.18) 0%,transparent 100%); border:1px solid rgba(0,167,181,0.2); animation:breathe 5s ease-in-out infinite; }
+        @keyframes breathe { 0%,100%{opacity:0.6;transform:scale(1)} 50%{opacity:1;transform:scale(1.05)} }
+        .orb-dot { position:absolute; top:50%; left:50%; width:5px; height:5px; border-radius:50%; background:rgba(0,167,181,0.6); transform:translate(-50%,-50%); animation:pulse 5s ease-in-out infinite; }
+        @keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:1;box-shadow:0 0 12px rgba(0,167,181,0.6)} }
+        .orb.paused .orb-ring { border-color:rgba(255,255,255,0.04); animation-duration:30s !important; }
+        .orb.paused .orb-core { background:none; border-color:rgba(255,255,255,0.06); }
+        .orb.paused .orb-dot  { background:rgba(255,255,255,0.15); }
+        .orb.speaking .orb-core { background:radial-gradient(circle at 40% 35%,rgba(255,230,109,0.15) 0%,transparent 100%); border-color:rgba(255,230,109,0.2); }
+        .orb.speaking .orb-dot { background:rgba(255,230,109,0.6); box-shadow:0 0 10px rgba(255,230,109,0.4); }
+
+        .orb-name { font-family:Georgia,serif; font-size:11px; letter-spacing:9px; text-transform:uppercase; color:rgba(0,167,181,0.3); margin-bottom:8px; }
+        #orb-status { font-size:10px; letter-spacing:4px; text-transform:uppercase; color:rgba(255,255,255,0.1); animation:fade 4s ease-in-out infinite; }
+        @keyframes fade { 0%,100%{opacity:0.3} 50%{opacity:0.8} }
+
+        #debug-log { position:fixed; bottom:50px; left:0; right:0; max-height:120px; overflow-y:auto; background:rgba(0,0,0,0.88); border-top:1px solid rgba(0,167,181,0.15); padding:4px 12px; font-family:monospace; font-size:11px; display:none; z-index:200; }
+        #debug-log.show { display:block; }
+        .dl { padding:2px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+        .dl.heard  { color:rgba(78,205,196,0.9); }
+        .dl.intent { color:rgba(255,230,109,0.8); }
+        .dl.action { color:rgba(100,200,255,0.9); }
+        .dl.silent { color:rgba(255,255,255,0.25); }
+        .dl.err    { color:rgba(255,107,107,0.9); }
+
+        #controls { position:fixed; bottom:0; left:0; right:0; height:48px; background:rgba(6,6,9,0.7); border-top:1px solid rgba(255,255,255,0.04); display:flex; align-items:center; justify-content:center; gap:6px; z-index:100; }
+        .ctrl { background:transparent; border:1px solid rgba(255,255,255,0.07); color:rgba(255,255,255,0.3); padding:5px 14px; border-radius:16px; font-size:11px; text-transform:uppercase; letter-spacing:1px; cursor:pointer; }
+        .ctrl:hover { border-color:rgba(0,167,181,0.4); color:rgba(0,167,181,0.8); }
+
+        #wake-flash { position:fixed; inset:0; z-index:999; pointer-events:none; opacity:0; background:rgba(0,167,181,0.12); }
+        @keyframes flashAnim { 0%{opacity:1} 100%{opacity:0} }
+        #wake-flash.fire { animation:flashAnim 0.4s ease-out forwards; }
+
+        #ruling-overlay { position:fixed; inset:0; background:#07070e; z-index:1000; display:none; flex-direction:column; overflow-y:auto; }
+        #ruling-overlay.show { display:flex; }
+
+        #judge-stage { min-height:50vh; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; position:relative; flex-shrink:0; }
+        #judge-stage::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse 55% 45% at 50% 85%,rgba(0,167,181,0.08) 0%,transparent 70%); }
+
+        .judge-fig { width:140px; height:230px; position:relative; }
+        .judge-head { position:absolute; top:0; left:50%; transform:translateX(-50%); width:54px; height:60px; border-radius:50% 50% 40% 40%; border:1px solid rgba(0,167,181,0.16); background:radial-gradient(ellipse at 50% 40%,rgba(0,167,181,0.06) 0%,transparent 70%); }
+        .judge-head::after { content:''; position:absolute; top:18px; left:9px; right:9px; bottom:9px; background:rgba(0,0,0,0.9); border-radius:50%; }
+        .judge-eyes { position:absolute; top:29px; left:50%; transform:translateX(-50%); width:26px; display:flex; justify-content:space-between; z-index:2; }
+        .judge-eyes::before,.judge-eyes::after { content:''; width:5px; height:2px; border-radius:50%; background:rgba(0,167,181,0.65); box-shadow:0 0 7px rgba(0,167,181,0.8); animation:glow 4s ease-in-out infinite; }
+        @keyframes glow { 0%,100%{opacity:0.4} 50%{opacity:1} }
+        .judge-cloak { position:absolute; top:48px; left:0; right:0; bottom:0; background:linear-gradient(175deg,rgba(10,10,22,0.97) 0%,rgba(5,5,14,0.99) 60%,rgba(0,167,181,0.03) 100%); border-radius:16px 16px 40% 40%; border:1px solid rgba(0,167,181,0.1); border-top:none; }
+        .judge-cloak::after { content:''; position:absolute; bottom:0; left:22%; right:22%; height:1px; background:rgba(0,167,181,0.15); border-radius:50%; }
+
+        .bubble { position:relative; background:rgba(9,10,22,0.98); border:1px solid rgba(0,167,181,0.28); border-radius:18px; padding:22px 26px; margin:0 18px; max-width:680px; width:calc(100% - 36px); box-shadow:0 0 40px rgba(0,167,181,0.06); animation:bubIn 0.3s 0.15s cubic-bezier(0.22,1,0.36,1) both; }
+        @keyframes bubIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+        .bubble::before { content:''; position:absolute; top:-9px; left:50%; transform:translateX(-50%); border-left:9px solid transparent; border-right:9px solid transparent; border-bottom:9px solid rgba(0,167,181,0.28); }
+        .bubble::after  { content:''; position:absolute; top:-7px; left:50%; transform:translateX(-50%); border-left:8px solid transparent; border-right:8px solid transparent; border-bottom:8px solid rgba(9,10,22,0.98); }
+
+        #bubble-badge { margin-bottom:8px; min-height:0; }
+        .badge { display:inline-flex; align-items:center; gap:5px; padding:2px 10px; border-radius:20px; font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; }
+        .badge.dispute    { background:rgba(255,107,107,0.09); border:1px solid rgba(255,107,107,0.28); color:rgba(255,128,128,0.85); }
+        .badge.correction { background:rgba(255,230,109,0.08); border:1px solid rgba(255,230,109,0.28); color:rgba(255,230,109,0.8); }
+        .badge.info       { background:rgba(0,167,181,0.08);   border:1px solid rgba(0,167,181,0.28);   color:rgba(0,167,181,0.8); }
+
+        #bubble-verdict { font-size:17px; line-height:1.7; color:#dde0f0; }
+        #bubble-verdict strong { color:#fff; }
+        #bubble-verdict .teal { color:#4ecdc4; }
+        #bubble-analogy { margin-top:12px; display:flex; align-items:flex-start; gap:8px; background:rgba(0,167,181,0.05); border:1px solid rgba(0,167,181,0.13); border-radius:10px; padding:9px 13px; font-size:13px; color:rgba(0,167,181,0.7); font-style:italic; }
+        #bubble-analogy:empty { display:none; }
+        #bubble-action { margin-top:9px; display:flex; align-items:center; gap:9px; background:rgba(78,205,196,0.05); border:1px solid rgba(78,205,196,0.15); border-radius:10px; padding:9px 13px; font-size:13px; color:rgba(200,240,238,0.75); }
+        #bubble-action:empty { display:none; }
+        .act-lbl { font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#4ecdc4; white-space:nowrap; }
+
+        .scroll-hint { display:flex; flex-direction:column; align-items:center; gap:5px; padding:14px 0 6px; flex-shrink:0; color:rgba(0,167,181,0.28); font-size:10px; letter-spacing:2px; text-transform:uppercase; animation:bob 2s ease-in-out infinite; }
+        @keyframes bob { 0%,100%{transform:translateY(0);opacity:0.35} 50%{transform:translateY(4px);opacity:0.65} }
+        .scroll-hint svg { width:14px; height:14px; }
+
+        #ruling-details { background:rgba(0,0,0,0.45); border-top:1px solid rgba(0,167,181,0.08); padding:26px 22px 100px; flex-shrink:0; }
+        #ruling-details-inner { max-width:680px; margin:0 auto; }
+
+        .dp { font-size:14px; color:#99a; line-height:1.8; }
+        .dp strong { color:#cce; }
+        .dp .teal { color:#4ecdc4; }
+        .kw-plain { font-size:14px; color:#bbc; line-height:1.75; margin-bottom:12px; }
+        .kw-plain strong { color:#dde; }
+        .nuance { font-size:12px; color:rgba(160,160,180,0.7); line-height:1.6; padding-left:12px; border-left:2px solid rgba(0,167,181,0.18); margin-bottom:6px; }
+        .mistake-box { background:rgba(255,107,107,0.06); border:1px solid rgba(255,107,107,0.2); border-radius:10px; padding:12px 14px; margin-bottom:12px; }
+        .mistake-lbl { font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:rgba(255,107,107,0.65); margin-bottom:5px; }
+        .action-box { background:rgba(78,205,196,0.05); border:1px solid rgba(78,205,196,0.18); border-radius:10px; padding:12px 14px; margin-bottom:12px; }
+        .action-box-lbl { font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:rgba(78,205,196,0.65); margin-bottom:5px; }
+        .ex-box { background:rgba(255,230,109,0.04); border-left:3px solid rgba(255,230,109,0.3); padding:12px 16px; border-radius:0 8px 8px 0; margin-bottom:12px; }
+        .ex-lbl { font-size:9px; color:rgba(255,230,109,0.6); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; font-weight:700; }
+        .chip-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+        .kw-chip { background:rgba(0,167,181,0.06); border:1px solid rgba(0,167,181,0.2); color:rgba(78,205,196,0.75); padding:4px 12px; border-radius:20px; font-size:11px; cursor:pointer; }
+        .kw-chip:hover { background:rgba(0,167,181,0.14); color:#4ecdc4; }
+        .or { margin-top:16px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.04); }
+        .or-lbl { font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:#333; margin-bottom:5px; }
+        .or-ref { font-family:monospace; font-size:11px; color:#333; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); border-radius:5px; padding:5px 9px; display:inline-block; }
+        .card-grid { display:grid; grid-template-columns:200px 1fr; gap:20px; align-items:start; }
+        .card-img img { max-width:100%; border-radius:8px; box-shadow:0 8px 28px rgba(0,0,0,0.65); }
+        .card-name { font-size:18px; font-weight:700; color:rgba(0,167,181,0.9); margin-bottom:3px; }
+        .card-type { font-size:12px; color:#555; font-style:italic; margin-bottom:12px; }
+        .oracle { background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.05); padding:11px 13px; border-radius:8px; font-size:13px; color:#99a; line-height:1.65; white-space:pre-wrap; margin-bottom:12px; }
+        .vb { display:flex; align-items:center; gap:12px; border-radius:11px; padding:13px 16px; margin-bottom:16px; }
+        .vb.info    { background:rgba(0,167,181,0.07);   border:1px solid rgba(0,167,181,0.22); }
+        .vb.yes     { background:rgba(78,205,196,0.07);  border:1px solid rgba(78,205,196,0.25); }
+        .vb.no      { background:rgba(255,107,107,0.07); border:1px solid rgba(255,107,107,0.25); }
+        .vb.depends { background:rgba(255,230,109,0.06); border:1px solid rgba(255,230,109,0.25); }
+        .vb-icon { font-size:20px; }
+        .vb-stmt { font-size:17px; font-weight:700; }
+        .vb.info    .vb-stmt { color:rgba(0,167,181,0.9); }
+        .vb.yes     .vb-stmt { color:#4ecdc4; }
+        .vb.no      .vb-stmt { color:#ff6b6b; }
+        .vb.depends .vb-stmt { color:#ffe66d; }
+        .mkw { padding:13px; margin-bottom:10px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:9px; }
+        .mkw h3 { color:rgba(0,167,181,0.9); margin-bottom:3px; font-size:14px; }
+        .mkw .ref { font-family:monospace; font-size:9px; color:#4ecdc4; margin-bottom:5px; }
+        .mkw p { font-size:12px; color:#99a; line-height:1.6; }
+
+        #close-btn { position:fixed; top:13px; right:15px; z-index:1010; width:32px; height:32px; border-radius:50%; background:rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.3); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(8px); }
+        #close-btn:hover { border-color:#00a7b5; color:#00a7b5; }
+
+        #history-panel { position:fixed; top:54px; right:14px; display:none; flex-direction:column; gap:4px; z-index:200; max-width:185px; }
+        #history-panel.show { display:flex; }
+        .h-item { display:flex; justify-content:space-between; align-items:center; gap:6px; background:rgba(6,6,9,0.9); border:1px solid rgba(0,167,181,0.13); border-radius:7px; padding:5px 9px; cursor:pointer; }
+        .h-item:hover { border-color:rgba(0,167,181,0.35); }
+        .h-lbl { font-size:11px; color:rgba(0,167,181,0.65); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-transform:capitalize; }
+        .h-time { font-size:9px; color:rgba(255,255,255,0.2); white-space:nowrap; }
+
+        #session-summary { position:fixed; inset:0; background:rgba(0,0,0,0.93); display:none; align-items:center; justify-content:center; z-index:3000; padding:24px; }
+        #session-summary.show { display:flex; }
+        .sc { background:linear-gradient(155deg,#0d0d1c,#111125); border:1px solid rgba(0,167,181,0.28); border-radius:20px; padding:32px; max-width:440px; width:100%; }
+        .sc-title { font-size:11px; letter-spacing:4px; text-transform:uppercase; color:rgba(0,167,181,0.45); margin-bottom:22px; text-align:center; }
+        .sc-stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
+        .sc-stat { background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.05); border-radius:11px; padding:14px; text-align:center; }
+        .sc-val { font-family:monospace; font-size:24px; font-weight:500; color:#00a7b5; }
+        .sc-key { font-size:9px; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,0.2); margin-top:3px; }
+        .sc-kws { margin-bottom:20px; }
+        .sc-kws-lbl { font-size:9px; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,0.2); margin-bottom:7px; }
+        .sc-chips { display:flex; flex-wrap:wrap; gap:5px; }
+        .sc-chip { background:rgba(0,167,181,0.07); border:1px solid rgba(0,167,181,0.18); color:rgba(78,205,196,0.65); padding:3px 11px; border-radius:20px; font-size:10px; }
+        .sc-acts { display:flex; gap:8px; }
+        .sc-btn { flex:1; padding:10px; border-radius:10px; font-size:11px; text-transform:uppercase; letter-spacing:1px; cursor:pointer; }
+        .sc-p { background:transparent; border:1px solid rgba(0,167,181,0.35); color:rgba(0,167,181,0.75); }
+        .sc-s { background:transparent; border:1px solid rgba(255,255,255,0.07); color:rgba(255,255,255,0.2); }
+
+        #ambient-canvas { position:fixed; inset:0; z-index:0; pointer-events:none; }
+        @media (max-width:600px) { .card-grid { grid-template-columns:1fr; } }
+    </style>
+</head>
+<body>
+
+<canvas id="ambient-canvas"></canvas>
+<div id="wake-flash"></div>
+
+<div id="status-bar">
+    <div id="session-timer">00:00:00</div>
+    <div id="dispute-counter">0 Disputes</div>
+    <button id="end-btn" onclick="endSession()">End Session</button>
+</div>
+
+<div id="history-panel"></div>
+
+<div id="standby">
+    <div class="orb listening" id="main-orb">
+        <div class="orb-ring"></div>
+        <div class="orb-ring"></div>
+        <div class="orb-ring"></div>
+        <div class="orb-core"></div>
+        <div class="orb-dot"></div>
+    </div>
+    <div class="orb-name">Veritas</div>
+    <div id="orb-status">Listening</div>
+</div>
+
+<div id="debug-log"></div>
+
+<div id="controls">
+    <button class="ctrl" onclick="togglePause()">&#9199; Pause</button>
+    <button class="ctrl" onclick="repeatLastRuling()">&#8617; Repeat</button>
+    <button class="ctrl" onclick="showManualSearch()">&#9906; Card Lookup</button>
+    <button class="ctrl" onclick="showRuleReference()">&#8801; Keywords</button>
+    <button class="ctrl" onclick="testManually()">&#9889; Test</button>
+</div>
+
+<div id="ruling-overlay">
+    <button id="close-btn" onclick="closeRuling()">&#10005;</button>
+    <div id="judge-stage">
+        <div class="judge-fig">
+            <div class="judge-head"><div class="judge-eyes"></div></div>
+            <div class="judge-cloak"></div>
+        </div>
+        <div class="bubble">
+            <div id="bubble-badge"></div>
+            <div id="bubble-verdict">Analyzing&hellip;</div>
+            <div id="bubble-analogy"></div>
+            <div id="bubble-action"></div>
+        </div>
+    </div>
+    <div class="scroll-hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        Scroll for full ruling
+    </div>
+    <div id="ruling-details">
+        <div id="ruling-details-inner"></div>
+    </div>
+</div>
+
+<div id="session-summary">
+    <div class="sc">
+        <div class="sc-title">Session Complete</div>
+        <div class="sc-stats" id="summary-stats"></div>
+        <div class="sc-kws" id="summary-keywords"></div>
+        <div class="sc-acts">
+            <button class="sc-btn sc-p" onclick="confirmEndSession()">End Session</button>
+            <button class="sc-btn sc-s" onclick="dismissSummary()">Keep Playing</button>
+        </div>
+    </div>
+</div>
+
+<script>
+'use strict';
+
+// ── Keywords ─────────────────────────────────────────────────────────
+const KW = (typeof window.KEYWORDS === 'object' && window.KEYWORDS) ? window.KEYWORDS : {};
+
+function matchKw(kw, lower) {
+    if (kw.includes(' ')) return lower.includes(kw);
+    return new RegExp('\\b' + kw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\b','i').test(lower);
+}
+
+// ── Debug ─────────────────────────────────────────────────────────────
+let debugOn = false;
+function dbg(msg, type) {
+    if (debugOn) {
+        const p = document.getElementById('debug-log');
+        if (p) {
+            const d = document.createElement('div');
+            d.className = 'dl ' + (type||'');
+            d.textContent = new Date().toLocaleTimeString('en-US',{hour12:false}) + ' [' + (type||'log').toUpperCase().slice(0,6) + '] ' + msg;
+            p.appendChild(d);
+            p.scrollTop = p.scrollHeight;
+            while (p.children.length > 50) p.removeChild(p.firstChild);
+        }
+    }
+    console.debug('[Veritas]', type, msg);
+}
+
+// ── State ─────────────────────────────────────────────────────────────
+let recognition   = null;
+let recRunning    = false;
+let recStopped    = false;
+let isPaused      = false;
+let isSpeaking    = false;
+let cooldown      = false;
+let cooldownTimer = null;
+let disputeCount  = 0;
+let sessionStart  = Date.now();
+let lastRuling    = null;
+const dispLog     = [];
+const rulingHist  = [];
+const convBuf     = [];
+
+// Sentence accumulator
+let pending      = '';
+let pendingTimer = null;
+const GAP_MS     = 1500;
+
+// Clarification
+let clarifying   = false;
+let clarifyTimer = null;
+
+// ── Intent classifier ─────────────────────────────────────────────────
+function getIntent(text) {
+    const t = text.toLowerCase();
+    const D = [
+        /\bno[,. ]+it (doesn'?t|can'?t|won'?t|isn'?t)/i,
+        /\bthat'?s? (wrong|not right|incorrect|not how|not true)/i,
+        /\byou'?re? (wrong|incorrect|mistaken)/i,
+        /\bnope[,.]/i, /\bwrong[,.]/i,
+        /\bask veritas\b/i, /\bveritas\b/i,
+        /\bcheck the (ruling|card)\b/i, /\bread the card\b/i,
+        /\bthat doesn'?t (work|trigger|apply)\b/i,
+        /\bit doesn'?t (work|trigger|apply)\b/i,
+        /\bcan'?t (target|be targeted)\b/i,
+        /\bnot able to target\b/i,
+        /\byou can'?t (target|cast|block|attack|respond)\b/i,
+        /\bthat'?s? not (how|what|right)\b/i,
+        /\bno it (does|doesn'?t|can|can'?t)\b/i,
+        /doesn'?t work (like|that way)/i,
+    ];
+    if (D.some(p => p.test(t))) return 'dispute';
+
+    const Q = [
+        /\?\s*$/, /^(what|how|does|do|can|is|are|will|would)\b/i,
+        /\b(what does|how does|does it|can it|is it)\b/i,
+        /\b(right|correct)\?/i, /\b(explain|tell me|what is)\b/i,
+    ];
+    if (Q.some(p => p.test(t))) return 'question';
+
+    const C = [
+        /\b(hexproof|trample|flying|deathtouch|lifelink|indestructible|haste|reach|menace|shroud|ward|protection|first strike|double strike)\b.*(means?|stops?|prevents?|lets?|allows?|makes?)/i,
+        /\bbecause (of )?(hexproof|trample|flying|deathtouch|lifelink|indestructible)\b/i,
+        /\b(it|this|that|the creature) has (hexproof|trample|flying|deathtouch|lifelink|indestructible|haste|reach|menace|shroud|ward)\b/i,
+        /\byou can'?t (target|block) (it|this|that)\b/i,
+    ];
+    if (C.some(p => p.test(t))) return 'claim';
+    return 'chatter';
+}
+
+// ── Keyword extraction ────────────────────────────────────────────────
+function getKws(text) {
+    const lower = text.toLowerCase();
+    return Object.keys(KW).filter(k => matchKw(k,lower)).sort((a,b) => b.length - a.length);
+}
+
+const CONCEPTS = [
+    {r:/\b(target(ing)?|cast(ing)? on|can'?t be targeted)\b/i, k:['hexproof','shroud','ward','protection']},
+    {r:/\b(block(ing|ed)?|can'?t block|unblockable)\b/i,        k:['flying','menace','reach','trample']},
+    {r:/\b(dies?|dying|death trigger|goes? to graveyard)\b/i,   k:['deathtouch','indestructible']},
+    {r:/\b(can'?t die|won'?t die|can'?t be destroyed)\b/i,      k:['indestructible','regenerate']},
+    {r:/\b(deal(s|ing)? damage|combat damage)\b/i,              k:['deathtouch','lifelink','first strike']},
+    {r:/\b(gain(s|ing)? life)\b/i,                               k:['lifelink']},
+    {r:/\b(attack(s|ing)?|swings?)\b/i,                          k:['haste','vigilance','menace']},
+    {r:/\b(exil(e|ed|ing)|blink|flicker)\b/i,                   k:['exile']},
+    {r:/\b(sacrific(e|ed|ing)|sac)\b/i,                         k:['sacrifice']},
+    {r:/\b(commander damage|command zone|21 damage)\b/i,         k:['commander damage','commander tax']},
+];
+
+function getConcepts(text) {
+    const seen = new Set(), found = [];
+    const lower = text.toLowerCase();
+    for (const e of CONCEPTS) {
+        if (e.r.test(lower)) {
+            for (const k of e.k) {
+                if (!seen.has(k) && KW[k]) { seen.add(k); found.push(k); }
+            }
+        }
+    }
+    return found;
+}
+
+const SKIP = new Set(['i','you','he','she','it','we','they','this','that','the','a','an','and','or','but','so','player','creature','spell','card','damage','life','counter','wait','hold','actually','yeah','okay']);
+
+function getCardName(text) {
+    const q = text.match(/["']([A-Z][a-zA-Z\s',\-]{2,30}?)["']/);
+    if (q) return q[1].trim();
+    const n = text.match(/(?:card (?:named|called)|playing|casting)\s+([A-Z][a-zA-Z\s'\-]{2,25}?)(?:\s+(?:does|is|can|has)|[,.]|$)/i);
+    if (n && !SKIP.has(n[1].toLowerCase())) return n[1].trim();
+    return null;
+}
+
+function getPriorKws() {
+    if (convBuf.length < 2) return [];
+    const prior = convBuf[convBuf.length - 2];
+    if (!prior) return [];
+    return prior.kws.length > 0 ? prior.kws : getConcepts(prior.text);
+}
+
+// ── Wrong claims ──────────────────────────────────────────────────────
+const WRONG = {
+    hexproof: [
+        {p:/nobody|no one|no spell|stops (all|every|any)/i, f:'Hexproof only stops opponents targeting it — you can still target your own hexproof creatures.'},
+        {p:/can'?t be (affected|touched) by anything/i,     f:'Hexproof stops targeting only — board wipes still apply.'},
+    ],
+    trample: [
+        {p:/all (the )?damage goes? through|ignores? blockers?/i, f:'Trample requires assigning lethal damage to each blocker first — only the excess goes to the player.'},
+    ],
+    indestructible: [
+        {p:/can'?t be (removed|killed|exiled)|nothing can (kill|destroy|remove)/i, f:'Indestructible stops destroy effects but exile, -X/-X to 0 toughness, and sacrifice still work.'},
+    ],
+    'first strike': [
+        {p:/deals? damage twice|hits? twice/i, f:'First strike deals damage once in the first step. Double strike deals damage in both steps.'},
+    ],
+    deathtouch: [
+        {p:/kills? (the )?player|any damage.*player/i, f:'Deathtouch only applies to creatures — players take normal damage.'},
+    ],
+    flying: [
+        {p:/nothing can block|no creature can block/i, f:'Flying creatures can be blocked by creatures with flying OR reach.'},
+    ],
+};
+
+function checkWrong(text, kw) {
+    const e = WRONG[kw]; if (!e) return null;
+    for (const w of e) if (w.p.test(text)) return w.f;
+    return null;
+}
+
+// ── Known interactions ────────────────────────────────────────────────
+const IX = {
+    'trample+deathtouch':     {tag:'yes',  title:'Trample + Deathtouch',     rule:'702.19b + 702.2b', body:'<p>With deathtouch, any damage is lethal. With trample, assign just <span class="teal">1 damage</span> to each blocker (lethal from deathtouch) — all remaining power tramples to the defending player.</p>'},
+    'first strike+deathtouch':{tag:'yes',  title:'First Strike + Deathtouch',rule:'702.7b + 702.2b',  body:'<p>In the first strike step, this creature deals damage — and 1 damage kills any creature (deathtouch). The blocked creature dies before dealing damage back.</p>'},
+    'hexproof+indestructible':{tag:'info', title:'Hexproof + Indestructible', rule:'702.11c + 702.12b',body:'<p>Together: opponents cannot target it AND cannot destroy it. What still works: <strong>exile</strong>, <strong>sacrifice</strong>, <strong>−X/−X to 0 toughness</strong>.</p>'},
+    'lifelink+double strike':  {tag:'yes', title:'Lifelink + Double Strike',  rule:'702.8b + 702.15b', body:'<p>Double strike deals damage in two steps. You gain life from both — <strong>life gained twice</strong> per combat.</p>'},
+};
+
+function getIx(a,b) {
+    const d = IX[a+'+'+b] || IX[b+'+'+a];
+    return d ? {type:'semantic', data:d} : null;
+}
+
+// ── Main reason function ──────────────────────────────────────────────
+function reason(text) {
+    const i    = getIntent(text);
+    const kws  = getKws(text);
+    const all  = kws.length > 0 ? kws : getConcepts(text);
+    const ctx  = /\battack/i.test(text) ? 'attacking' : /\bblock/i.test(text) ? 'blocking' : null;
+    const card = getCardName(text);
+
+    dbg('intent=' + i + ' kws=[' + all.slice(0,3).join(',') + '] card=' + (card||'-'), 'intent');
+
+    if (i === 'dispute') {
+        if (all.length >= 2) { const ix=getIx(all[0],all[1]); if(ix) return {action:'ruling',topic:ix}; return {action:'ruling',topic:{type:'multi_keyword',keywords:all}}; }
+        if (all.length === 1) return {action:'ruling',topic:{type:'keyword',keyword:all[0],context:ctx}};
+        if (card) return {action:'card',name:card};
+        const p = getPriorKws();
+        if (p.length > 0) return {action:'ruling',topic:{type:'keyword',keyword:p[0],context:ctx}};
+        return {action:'ask'};
+    }
+    if (i === 'claim') {
+        if (card) return {action:'card',name:card};
+        if (all.length > 0) { const fix=checkWrong(text,all[0]); if(fix) return {action:'correct',topic:{type:'keyword',keyword:all[0],context:ctx},fix}; }
+        return null;
+    }
+    if (i === 'question') {
+        if (all.length >= 2) { const ix=getIx(all[0],all[1]); if(ix) return {action:'ruling',topic:ix}; return {action:'ruling',topic:{type:'multi_keyword',keywords:all}}; }
+        if (all.length === 1) return {action:'ruling',topic:{type:'keyword',keyword:all[0],context:ctx}};
+        if (card) return {action:'card',name:card};
+        if (/\b(it|that|this)\b/i.test(text) && !Object.keys(KW).some(k=>matchKw(k,text.toLowerCase()))) {
+            const p = getPriorKws();
+            if (p.length > 0) return {action:'ruling',topic:{type:'keyword',keyword:p[0],context:ctx}};
+        }
+        return null;
+    }
+    return null;
+}
+
+// ── Act on result ─────────────────────────────────────────────────────
+function act(result, text) {
+    if (!result) { dbg('silent', 'silent'); return; }
+    dbg('act=' + result.action, 'action');
+
+    if (result.action === 'card') { if (!cooldown) doCard(result.name, text); return; }
+
+    if (result.action === 'ask') {
+        if (cooldown) return;
+        setCool(4000); chime(); flash(); bump(text);
+        setOverlay('<span class="badge dispute">&#9873; Dispute</span>', "Got it — what's the rule? Name the keyword or card.", '', '');
+        setDetails('<div class="dp" style="color:rgba(255,255,255,0.25);padding:16px 0;">Listening for the rule&hellip;</div>');
+        openOverlay(); say('What is the rule being disputed?'); startClarify();
+        return;
+    }
+
+    if (!result.topic) { dbg('no topic', 'silent'); return; }
+    const html = renderTopic(result.topic);
+    if (!html) { dbg('renderTopic returned null', 'silent'); return; }
+
+    if (result.action === 'ruling') {
+        if (cooldown) return;
+        setCool(3000); chime(); flash(); bump(text);
+        showRuling(html, result.topic, true);
+        say(spokenFor(result.topic));
+    } else if (result.action === 'correct') {
+        if (cooldown) return;
+        setCool(2500); softChime();
+        showRuling(html, result.topic, false, true, result.fix);
+        say(result.fix ? result.fix + '. ' + (spokenFor(result.topic)||'') : spokenFor(result.topic));
+    } else if (result.action === 'question') {
+        if (cooldown) return;
+        setCool(2500);
+        showRuling(html, result.topic, false);
+        say(spokenFor(result.topic));
+    }
+}
+
+function setCool(ms) { cooldown=true; clearTimeout(cooldownTimer); cooldownTimer=setTimeout(()=>{cooldown=false;},ms); }
+function bump(text) {
+    disputeCount++;
+    const el=document.getElementById('dispute-counter');
+    if(el){el.textContent=disputeCount+' Dispute'+(disputeCount!==1?'s':''); el.classList.add('active');}
+    dispLog.push({trigger:(text||'').slice(0,120), ts:new Date().toISOString()});
+}
+function startClarify() { clarifying=true; clearTimeout(clarifyTimer); clarifyTimer=setTimeout(()=>{clarifying=false;},12000); }
+function stopClarify()  { clarifying=false; clearTimeout(clarifyTimer); }
+
+// ── Rendering ─────────────────────────────────────────────────────────
+function spokenFor(topic) {
+    if (!topic) return null;
+    if (topic.type==='keyword') { const d=KW[topic.keyword]; if(!d) return topic.keyword; return topic.keyword+'. '+(d.tableTalk||d.plain.replace(/<[^>]+>/g,'')).slice(0,200); }
+    if (topic.type==='semantic') return (topic.data.title||'')+'. '+(topic.data.body||'').replace(/<[^>]+>/g,'').slice(0,200);
+    if (topic.type==='multi_keyword') return topic.keywords.slice(0,2).join(' and ')+'. See the ruling.';
+    return null;
+}
+
+function vb(tag, label) {
+    const icons={yes:'&#10003;',no:'&#10007;',depends:'&#9888;',info:'&#8505;'};
+    return `<div class="vb ${tag||'info'}"><div class="vb-icon">${icons[tag]||'&#8505;'}</div><div class="vb-stmt">${label}</div></div>`;
+}
+
+function renderTopic(topic) {
+    if (!topic) return null;
+    if (topic.type==='keyword') {
+        const d=KW[topic.keyword];
+        if (!d) return `<div class="dp">No data for <strong>${topic.keyword}</strong>.</div>`;
+        const cap = topic.keyword.charAt(0).toUpperCase()+topic.keyword.slice(1);
+        const nuances = (d.nuances||[]).map(n=>`<div class="nuance">&#8226; ${n}</div>`).join('');
+        const chips = (d.related||[]).filter(r=>KW[r]).map(r=>`<span class="kw-chip" onclick="quickLookup('${r}')">${r}</span>`).join('');
+        return `<div>${vb('info',cap)}
+            ${d.category?`<div style="display:inline-block;background:rgba(0,167,181,0.1);border:1px solid rgba(0,167,181,0.25);color:rgba(0,167,181,0.9);font-size:10px;letter-spacing:2px;text-transform:uppercase;padding:3px 10px;border-radius:20px;margin-bottom:12px;">${d.category}</div>`:''}
+            <div class="kw-plain">${d.plain}</div>
+            ${d.commonMistake?`<div class="mistake-box"><div class="mistake-lbl">&#9888; Common Mistake</div><div class="dp">${d.commonMistake}</div></div>`:''}
+            ${d.whatToDo?`<div class="action-box"><div class="action-box-lbl">&#9654; What To Do</div><div class="dp">${d.whatToDo}</div></div>`:''}
+            ${d.example?`<div class="ex-box"><div class="ex-lbl">&#128214; Example</div><div class="dp">${d.example}</div></div>`:''}
+            ${nuances?`<div style="margin-top:10px;">${nuances}</div>`:''}
+            <div class="or"><div class="or-lbl">Official Ruling</div><div class="or-ref">${d.category||''} &#8212; CR ${d.rule}</div></div>
+            ${chips?`<div class="chip-row">${chips}</div>`:''}
+        </div>`;
+    }
+    if (topic.type==='multi_keyword') {
+        const items=topic.keywords.slice(0,4).map(kw=>{const d=KW[kw];if(!d)return'';return`<div class="mkw"><h3>${kw.toUpperCase()}</h3><div class="ref">${d.category} &#183; CR ${d.rule}</div><p>${d.plain.replace(/<[^>]+>/g,'').split(/\.\s/)[0]}.</p></div>`;}).join('');
+        return `<div>${vb('info',topic.keywords.slice(0,2).map(k=>k.charAt(0).toUpperCase()+k.slice(1)).join(' + '))}${items}</div>`;
+    }
+    if (topic.type==='semantic') {
+        const d=topic.data;
+        return `<div>${vb(d.tag||'info',d.title||'Ruling')}<div class="dp">${d.body||''}</div>${d.rule?`<div class="or"><div class="or-lbl">Official Ruling</div><div class="or-ref">CR ${d.rule}</div></div>`:''}</div>`;
+    }
+    return null;
+}
+
+function setOverlay(badge, verdict, analogy, action) {
+    const s=(id,v)=>{const el=document.getElementById(id);if(el)el.innerHTML=v;};
+    s('bubble-badge',badge); s('bubble-verdict',verdict); s('bubble-analogy',analogy); s('bubble-action',action);
+}
+function setDetails(html) { const el=document.getElementById('ruling-details-inner');if(el)el.innerHTML=html; }
+function openOverlay()    { const el=document.getElementById('ruling-overlay');if(el){el.scrollTop=0;el.classList.add('show');} }
+function closeRuling()    { const el=document.getElementById('ruling-overlay');if(el){el.classList.remove('show');el.scrollTop=0;} }
+
+function showRuling(html, topic, isDispute, isCorrection, fixNote) {
+    const badge = isDispute ? '<span class="badge dispute">&#9873; Dispute Detected</span>'
+                : isCorrection ? '<span class="badge correction">&#9888; Correction</span>' : '';
+    let verdict='';
+    if (topic.type==='keyword') { const d=KW[topic.keyword]; verdict=d?(d.tableTalk||d.plain.replace(/<[^>]+>/g,'').split(/\.\s/)[0]):topic.keyword; }
+    else if (topic.type==='semantic') verdict=(topic.data.body||'').replace(/<[^>]+>/g,'').split(/\.\s/)[0];
+    else if (topic.type==='multi_keyword') verdict=topic.keywords.slice(0,2).map(k=>k.charAt(0).toUpperCase()+k.slice(1)).join(' + ')+' &#8212; see below.';
+    if (fixNote) verdict=fixNote;
+    let analogy='', action='';
+    if (topic.type==='keyword') {
+        const d=KW[topic.keyword];
+        if (d&&d.analogy) analogy='&#128161; '+d.analogy;
+        if (d&&d.whatToDo) action='<span class="act-lbl">&#9654; Do This</span> '+d.whatToDo;
+    }
+    setOverlay(badge, verdict, analogy, action);
+    setDetails(html);
+    openOverlay();
+    lastRuling = {html, topic};
+    const label=topic.keyword||(topic.keywords&&topic.keywords[0])||(topic.data&&topic.data.title)||'Ruling';
+    rulingHist.unshift({html,topic,label,time:Date.now()});
+    if (rulingHist.length>5) rulingHist.pop();
+    renderHistory();
+}
+
+function renderHistory() {
+    const p=document.getElementById('history-panel');if(!p)return;
+    if (!rulingHist.length){p.classList.remove('show');return;}
+    p.classList.add('show');
+    p.innerHTML=rulingHist.map((r,i)=>{const m=Math.floor((Date.now()-r.time)/60000);return`<div class="h-item" onclick="showHist(${i})"><span class="h-lbl">${r.label}</span><span class="h-time">${m<1?'now':m+'m'}</span></div>`;}).join('');
+}
+function showHist(i) { const r=rulingHist[i];if(r)showRuling(r.html,r.topic,false); }
+function quickLookup(kw) { const d=KW[kw];if(!d)return;const html=renderTopic({type:'keyword',keyword:kw});if(!html)return;showRuling(html,{type:'keyword',keyword:kw},false);say(kw+'. '+(d.tableTalk||d.plain.replace(/<[^>]+>/g,'')).slice(0,200)); }
+
+// ── Scryfall card lookup ──────────────────────────────────────────────
+async function doCard(name, originalText) {
+    setCool(4000); chime(); flash();
+    setOverlay('<span class="badge info">&#8635; Checking&hellip;</span>', `Looking up <em>${name}</em>&hellip;`, '', '');
+    setDetails(''); openOverlay();
+
+    let card=null;
+    try {
+        let r=await fetch('https://api.scryfall.com/cards/named?fuzzy='+encodeURIComponent(name));
+        if (r.ok) card=await r.json();
+        else {
+            r=await fetch('https://api.scryfall.com/cards/search?q='+encodeURIComponent(name)+'&limit=1');
+            if (r.ok){const d=await r.json();if(d.data&&d.data.length)card=d.data[0];}
+        }
+    } catch(e){dbg('Scryfall: '+e.message,'err');}
+
+    if (!card){setOverlay('',`Couldn't find <em>${name}</em>.`,'','');setDetails('<div class="dp" style="color:rgba(255,255,255,0.25);">Card not found.</div>');return;}
+
+    const oracle=card.oracle_text||card.card_faces?.map(f=>f.oracle_text).join(' // ')||'';
+    const type=card.type_line||'';
+    const mana=card.mana_cost||card.card_faces?.[0]?.mana_cost||'';
+    const img=card.image_uris?.normal||card.card_faces?.[0]?.image_uris?.normal||'';
+
+    const claimedKws=getKws(originalText||name);
+    let fix=null;
+    for (const kw of claimedKws){fix=checkWrong(originalText||'',kw);if(fix)break;if(oracle.toLowerCase().indexOf(kw.toLowerCase())===-1){fix=card.name+" doesn't have "+kw+" — check the oracle text.";break;}}
+    if (fix) bump(originalText||name);
+
+    setOverlay(fix?'<span class="badge dispute">&#9873; Incorrect</span>':'<span class="badge info">&#128203; Card</span>',
+        fix?'<strong>'+card.name+':</strong> '+fix:'<strong>'+card.name+'</strong>','','');
+    setDetails(`<div class="${img?'card-grid':''}">
+        ${img?`<div class="card-img"><img src="${img}" alt="${card.name}"></div>`:''}
+        <div><div class="card-name">${card.name}</div><div class="card-type">${type}${mana?' &#183; '+mana:''}</div>
+        <div class="oracle">${oracle.replace(/\n/g,'<br>')}</div>
+        ${fix?`<div class="mistake-box"><div class="mistake-lbl">Correction</div><div class="dp">${fix}</div></div>`:''}</div></div>`);
+
+    lastRuling={html:'',topic:{type:'card',keyword:card.name}};
+    rulingHist.unshift({html:'',topic:{type:'card',keyword:card.name},label:card.name,time:Date.now()});
+    if(rulingHist.length>5)rulingHist.pop();
+    renderHistory();
+    say(fix||card.name+'. '+type+'. '+oracle.slice(0,100));
+}
+function showCardRuling(name){doCard(name,name);}
+
+// ── Audio ─────────────────────────────────────────────────────────────
+function chime() {
+    try {
+        const ac=new(window.AudioContext||window.webkitAudioContext)();
+        const now=ac.currentTime;
+        [[880,now,0.12,0.35],[1108,now+0.09,0.18,0.28]].forEach(([f,s,d,v])=>{
+            const o=ac.createOscillator(),g=ac.createGain();o.connect(g);g.connect(ac.destination);
+            o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,s);
+            g.gain.linearRampToValueAtTime(v,s+0.01);g.gain.exponentialRampToValueAtTime(0.001,s+d);
+            o.start(s);o.stop(s+d);
+        });
+    } catch(e){}
+}
+function softChime() {
+    try {
+        const ac=new(window.AudioContext||window.webkitAudioContext)();
+        const o=ac.createOscillator(),g=ac.createGain();o.connect(g);g.connect(ac.destination);
+        o.type='sine';o.frequency.value=660;g.gain.setValueAtTime(0,ac.currentTime);
+        g.gain.linearRampToValueAtTime(0.15,ac.currentTime+0.01);g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.22);
+        o.start();o.stop(ac.currentTime+0.22);
+    } catch(e){}
+}
+function flash() { const el=document.getElementById('wake-flash');if(!el)return;el.classList.remove('fire');void el.offsetWidth;el.classList.add('fire'); }
+
+// ── Speech output ─────────────────────────────────────────────────────
+// Mic is NEVER stopped for TTS. isSpeaking just discards mic input
+// while we're talking so Veritas doesn't react to its own voice.
+function say(text) {
+    if (!('speechSynthesis' in window) || !text) return;
+    window.speechSynthesis.cancel();
+    const clean = text
+        .replace(/<[^>]+>/g,'')
+        .replace(/\{[^}]+\}/g,'')
+        .replace(/&amp;/g,'and')
+        .replace(/&#39;/g,"'")
+        .replace(/[&#\d+;]/g,' ')
+        .replace(/\s+/g,' ')
+        .trim();
+    if (!clean) return;
+
+    isSpeaking = true;
+    setOrb('speaking');
+    dbg('TTS: ' + clean.slice(0,60), 'action');
+
+    const u = new SpeechSynthesisUtterance(clean);
+    u.rate = 0.95;
+    const done = () => {
+        isSpeaking = false;
+        pending = '';
+        clearTimeout(pendingTimer);
+        pendingTimer = null;
+        if (!recStopped && !isPaused) setOrb('listening');
+        dbg('TTS done', 'action');
+    };
+    u.onend   = done;
+    u.onerror = done;
+    window.speechSynthesis.speak(u);
+}
+
+// ── Speech recognition ────────────────────────────────────────────────
+// Android Chrome breaks with continuous=true — it stops after ~60s,
+// on screen touch, or on focus loss, with no reliable onend.
+// Fix: use continuous=false, process each result, restart immediately.
+// This creates a rapid loop of short sessions which Android handles fine.
+
+function flushPending() {
+    clearTimeout(pendingTimer);
+    pendingTimer = null;
+    const text = pending.trim();
+    pending = '';
+    if (!text) return;
+    dbg('HEARD: ' + text, 'heard');
+    handleFinal(text);
+}
+
+function makeMic() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+        setOrb('dead');
+        const el = document.getElementById('orb-status');
+        if (el) el.textContent = 'Use Chrome or Edge';
+        return;
+    }
+    if (recStopped || isPaused) return;
+
+    // Null handlers on old object before discarding so its onend
+    // doesn't fire and trigger a duplicate makeMic call
+    if (recognition) {
+        recognition.onstart  = null;
+        recognition.onresult = null;
+        recognition.onerror  = null;
+        recognition.onend    = null;
+        try { recognition.abort(); } catch(e) {}
+        recognition = null;
+    }
+
+    const rec = new SR();
+    rec.continuous      = false;  // Android-safe: one utterance at a time
+    rec.interimResults  = true;
+    rec.lang            = 'en-US';
+    rec.maxAlternatives = 1;
+
+    rec.onstart = () => {
+        recRunning = true;
+        if (!isPaused && !isSpeaking) setOrb('listening');
+        dbg('mic on', 'action');
+    };
+
+    rec.onresult = (e) => {
+        if (isPaused) return;
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            const res = e.results[i];
+            if (!res || !res[0] || !res[0].transcript) continue;
+            const t = res[0].transcript.trim();
+            if (!t) continue;
+            if (res.isFinal) {
+                if (isSpeaking) { dbg('echo suppressed: ' + t, 'silent'); continue; }
+                pending += (pending ? ' ' : '') + t;
+                clearTimeout(pendingTimer);
+                pendingTimer = setTimeout(flushPending, GAP_MS);
+            } else {
+                if (!isSpeaking) handleInterim((pending + ' ' + t).trim());
+            }
+        }
+    };
+
+    rec.onerror = (e) => {
+        recRunning = false;
+        dbg('mic error: ' + e.error, 'err');
+        if (e.error === 'not-allowed') { setOrb('dead'); showMicDenied(); return; }
+        // All other errors: onend will follow and restart
+    };
+
+    rec.onend = () => {
+        recRunning = false;
+        dbg('mic ended', 'action');
+        // Flush any pending text
+        if (pending.trim() && !isSpeaking) {
+            const t = pending.trim(); pending = '';
+            handleFinal(t);
+        }
+        // Immediately restart with a fresh object
+        if (!recStopped && !isPaused) {
+            setTimeout(makeMic, 150);
+        }
+    };
+
+    recognition = rec;
+    try {
+        recognition.start();
+    } catch(e) {
+        dbg('start failed: ' + e.name, 'err');
+        recognition = null;
+        setTimeout(makeMic, 500);
+    }
+}
+
+function setupSpeech() { makeMic(); }
+
+function startListening() {
+    recStopped = false;
+    isPaused   = false;
+    isSpeaking = false;
+    pending    = '';
+    clearTimeout(pendingTimer);
+    pendingTimer = null;
+    cooldown = false;
+    clearTimeout(cooldownTimer);
+    setOrb('listening');
+    if (!recRunning) makeMic();
+}
+
+function stopListening() {
+    recStopped = true; // must be set BEFORE abort so onend skips restart
+    if (pending.trim()) { const t = pending.trim(); pending = ''; handleFinal(t); }
+    if (recognition) {
+        recognition.onend = null; // prevent onend triggering makeMic
+        try { recognition.abort(); } catch(e) {}
+        recognition = null;
+    }
+    recRunning = false;
+    setOrb('paused');
+}
+
+// ── Handlers ──────────────────────────────────────────────────────────
+const HARD = [
+    /\bveritas\b/i,
+    /\bask veritas\b/i,
+    /\bthat'?s? wrong\b/i,
+    /\byou'?re? wrong\b/i,
+    /\bno it (doesn'?t|can'?t|won'?t)\b/i,
+    /\bcheck the ruling\b/i,
+    /\bread the card\b/i,
+];
+
+function handleInterim(text) {
+    if (isPaused || isSpeaking || cooldown) return;
+    if (!HARD.some(p => p.test(text))) return;
+    clearTimeout(pendingTimer); pending = '';
+    dbg('HARD TRIGGER: ' + text.slice(0,60), 'action');
+    act(reason(text), text);
+}
+
+function handleFinal(text) {
+    if (isPaused || isSpeaking) return;
+    const kws = getKws(text);
+    convBuf.push({text, kws, ts:Date.now()});
+    if (convBuf.length > 8) convBuf.shift();
+
+    if (clarifying) {
+        stopClarify(); cooldown = false; clearTimeout(cooldownTimer);
+        const r = reason(text);
+        if (r && r.action !== 'ask') { act(r, text); return; }
+        if (kws.length > 0) {
+            const html = renderTopic({type:'keyword', keyword:kws[0]});
+            if (html) { showRuling(html, {type:'keyword', keyword:kws[0]}, true); say(spokenFor({type:'keyword', keyword:kws[0]})); }
+        }
+        return;
+    }
+    act(reason(text), text);
+}
+
+// ── Orb ───────────────────────────────────────────────────────────────
+function setOrb(state) {
+    const orb = document.getElementById('main-orb');
+    const lbl = document.getElementById('orb-status');
+    if (orb) orb.className = 'orb ' + state;
+    if (lbl) lbl.textContent = {
+        listening: 'Listening',
+        paused:    'Paused',
+        speaking:  'Speaking',
+        dead:      'Not supported',
+    }[state] || state;
+}
+
+function showMicDenied() {
+    if (document.getElementById('mic-denied')) return;
+    const d = document.createElement('div');
+    d.id = 'mic-denied';
+    d.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(6,6,9,0.97);display:flex;flex-direction:column;align-items:center;justify-content:center;';
+    d.innerHTML = '<div style="font-size:18px;letter-spacing:7px;color:rgba(255,107,107,0.7);margin-bottom:14px;">Mic Blocked</div><div style="font-size:13px;color:rgba(255,255,255,0.2);max-width:280px;text-align:center;line-height:1.8;margin-bottom:28px;">Allow microphone in browser settings, then reload.</div><button onclick="location.reload()" style="background:transparent;border:1px solid rgba(255,107,107,0.35);color:rgba(255,107,107,0.7);padding:11px 36px;border-radius:40px;font-size:11px;text-transform:uppercase;letter-spacing:3px;cursor:pointer;">Reload</button>';
+    document.body.appendChild(d);
+}
+
+// ── Controls ──────────────────────────────────────────────────────────
+function togglePause() { if (isPaused) startListening(); else { isPaused = true; stopListening(); } }
+function repeatLastRuling() { if (lastRuling) { showRuling(lastRuling.html, lastRuling.topic, false); const s=spokenFor(lastRuling.topic); if(s) say(s); } else say('No previous ruling.'); }
+function showManualSearch() { const n=prompt('Card name:'); if(n&&n.trim()) doCard(n.trim(),n.trim()); }
+function showRuleReference() {
+    const cats = {};
+    for (const [kw,d] of Object.entries(KW)) { const c=d.category||'Other'; if(!cats[c])cats[c]=[]; cats[c].push(kw); }
+    let html = '<div style="margin-bottom:18px;font-size:18px;font-weight:700;color:#dde;">Keywords</div>';
+    for (const [cat,kws] of Object.entries(cats)) {
+        html += `<div style="margin-bottom:16px;"><div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:#333;margin-bottom:7px;">${cat}</div><div class="chip-row">${kws.map(k=>`<span class="kw-chip" onclick="quickLookup('${k}');event.stopPropagation();">${k}</span>`).join('')}</div></div>`;
+    }
+    setOverlay('','All keywords &#8212; tap any to view the ruling.','','');
+    setDetails(html);
+    openOverlay();
+}
+function testManually() {
+    const pool = ['hexproof','trample','deathtouch','indestructible','first strike','flying','lifelink','commander damage','ward'];
+    const kw = pool[Math.floor(Math.random() * pool.length)];
+    dbg('TEST: ' + kw, 'action'); chime(); flash(); bump('test');
+    act({action:'ruling', topic:{type:'keyword', keyword:kw, context:null}}, 'test');
+}
+
+// ── Session ───────────────────────────────────────────────────────────
+function endSession() {
+    stopListening();
+    const e = Math.floor((Date.now()-sessionStart)/1000);
+    const h = Math.floor(e/3600).toString().padStart(2,'00');
+    const m = Math.floor((e%3600)/60).toString().padStart(2,'00');
+    const s = (e%60).toString().padStart(2,'0');
+    const topKws = (()=>{ const c={}; for(const u of convBuf) for(const k of u.kws) c[k]=(c[k]||0)+1; return Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k])=>k); })();
+    const el = document.getElementById('summary-stats');
+    if(el) el.innerHTML = `<div class="sc-stat"><div class="sc-val">${h}:${m}:${s}</div><div class="sc-key">Duration</div></div><div class="sc-stat"><div class="sc-val">${disputeCount}</div><div class="sc-key">Disputes</div></div>`;
+    const ke = document.getElementById('summary-keywords');
+    if(ke) ke.innerHTML = `<div class="sc-kws-lbl">Top Keywords</div><div class="sc-chips">${topKws.length?topKws.map(k=>`<span class="sc-chip">${k}</span>`).join(''):'<span style="color:rgba(255,255,255,0.15);">None</span>'}</div>`;
+    const modal = document.getElementById('session-summary');
+    if(modal) modal.classList.add('show');
+}
+function dismissSummary() { const m=document.getElementById('session-summary'); if(m) m.classList.remove('show'); startListening(); }
+function confirmEndSession() { try { window.location.href='index.html'; } catch(e) { window.location.reload(); } }
+
+// ── Canvas ────────────────────────────────────────────────────────────
+function initCanvas() {
+    const canvas = document.getElementById('ambient-canvas'); if(!canvas) return;
+    const ctx = canvas.getContext('2d'); let W, H;
+    const resize = () => { W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; };
+    resize(); window.addEventListener('resize', resize);
+    const pts = Array.from({length:50}, ()=>({x:Math.random()*window.innerWidth, y:Math.random()*window.innerHeight, r:Math.random()*1.3+0.2, vx:(Math.random()-0.5)*0.12, vy:(Math.random()-0.5)*0.12, o:Math.random()*0.09+0.02, ph:Math.random()*Math.PI*2, sp:Math.random()*0.006+0.003}));
+    (function draw(){
+        ctx.clearRect(0,0,W,H);
+        const t = Date.now()/1000;
+        pts.forEach(p=>{
+            p.x+=p.vx; p.y+=p.vy;
+            if(p.x<-5)p.x=W+5; if(p.x>W+5)p.x=-5;
+            if(p.y<-5)p.y=H+5; if(p.y>H+5)p.y=-5;
+            const a=p.o*(0.5+0.5*Math.sin(t*p.sp*60+p.ph));
+            ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+            ctx.fillStyle=`rgba(0,167,181,${a})`; ctx.fill();
+        });
+        requestAnimationFrame(draw);
+    })();
+}
+
+// ── Keys + Init ───────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeRuling();
+    if (e.key === ' ' && e.ctrlKey) { e.preventDefault(); togglePause(); }
+    if ((e.key === 'r' || e.key === 'R') && e.ctrlKey) { e.preventDefault(); repeatLastRuling(); }
+    if (e.key === 'd' || e.key === 'D') {
+        debugOn = !debugOn;
+        const p = document.getElementById('debug-log');
+        if(p) p.classList.toggle('show', debugOn);
+        dbg('Debug ' + (debugOn?'ON':'OFF'), 'action');
+    }
+});
+
+window.addEventListener('load', () => {
+    initCanvas();
+    setupSpeech();
+    setInterval(() => {
+        const s = Math.floor((Date.now()-sessionStart)/1000);
+        const el = document.getElementById('session-timer');
+        if(el) el.textContent = Math.floor(s/3600).toString().padStart(2,'00')+':'+Math.floor((s%3600)/60).toString().padStart(2,'00')+':'+(s%60).toString().padStart(2,'0');
+    }, 1000);
+    setInterval(renderHistory, 60000);
+    window.addEventListener('beforeunload', () => stopListening());
+});
+</script>
+</body>
+</html>
